@@ -5,10 +5,10 @@ import sys
 from methods import print_error
 
 
-libname = "EXTENSION-NAME"
+libname = "GDNative-GPUStableFluids2D"
 projectdir = "project"
 
-localEnv = Environment(tools=["default"], PLATFORM="")
+localEnv = Environment(tools=["default"], PLATFORM="windows")
 
 # Build profiles can be used to decrease compile times.
 # You can either specify "disabled_classes", OR
