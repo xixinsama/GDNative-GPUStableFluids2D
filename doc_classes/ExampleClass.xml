@@ -1,20 +1,204 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="ExampleClass" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="GPUStableFluids2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
 	<brief_description>
-		Example class.
+		A GPU-accelerated 2D stable fluid simulation node.
 	</brief_description>
 	<description>
-		An example class.
+		GPUStableFluids2D provides a real-time, incompressible fluid simulation on the GPU. It solves the 2D Navier-Stokes equations using the stable fluids method, with support for vorticity confinement, viscosity, and arbitrary boundaries. The simulation runs entirely on the GPU via compute shaders, making it suitable for interactive applications such as games and visual effects.
+		
+		The simulation state is stored in several floating-point textures: velocity, density (ink), pressure, divergence, and vorticity. You can access the density texture via [method get_density_texture] to display the fluid on a [Sprite2D] or other node. Use [method add_impulse] to inject force and ink into the field, simulating mouse or touch interaction.
+		
+		All simulation parameters are exposed as properties and can be tweaked in real time. The node automatically manages GPU resources and updates the simulation each frame. For optimal performance, keep the resolution moderate (e.g., 128x128 to 256x256) and adjust the number of Poisson solver iterations according to your quality requirements.
 	</description>
 	<tutorials>
+		<!-- Add links to tutorials or examples if available -->
 	</tutorials>
 	<methods>
-		<method name="print_type" qualifiers="const">
+		<method name="set_resolution">
 			<return type="void" />
-			<param index="0" name="variant" type="Variant" />
+			<param index="0" name="width" type="int" />
+			<param index="1" name="height" type="int" />
 			<description>
-				Print the type of the variant.
+				Sets the simulation grid resolution to [param width] x [param height] pixels. Changing the resolution will reallocate all GPU textures and reset the simulation state. The new resolution takes effect at the start of the next frame.
+			</description>
+		</method>
+		<method name="get_width" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the current width of the simulation grid (in pixels).
+			</description>
+		</method>
+		<method name="get_height" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the current height of the simulation grid (in pixels).
+			</description>
+		</method>
+		<method name="set_timestep">
+			<return type="void" />
+			<param index="0" name="timestep" type="float" />
+			<description>
+				Sets the simulation time step. Larger values make the fluid move faster but may cause instability. Typical values range from 0.5 to 2.0.
+			</description>
+		</method>
+		<method name="get_timestep" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the current simulation time step.
+			</description>
+		</method>
+		<method name="set_grid_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				Sets the physical size of each grid cell (assumed square). This affects how forces and velocities are interpreted in world units. For most applications, leave at 1.0 unless you need to match a specific world scale.
+			</description>
+		</method>
+		<method name="get_grid_scale" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the grid cell scale factor.
+			</description>
+		</method>
+		<method name="set_viscosity">
+			<return type="void" />
+			<param index="0" name="viscosity" type="float" />
+			<description>
+				Sets the fluid viscosity. Zero means inviscid (no diffusion), larger values make the fluid thicker and more resistant to flow. Viscosity is implemented by solving a diffusion equation using the same Poisson solver; higher viscosity may require more iterations.
+			</description>
+		</method>
+		<method name="get_viscosity" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the current viscosity value.
+			</description>
+		</method>
+		<method name="set_poisson_iterations">
+			<return type="void" />
+			<param index="0" name="iterations" type="int" />
+			<description>
+				Sets the number of Jacobi iterations used to solve the pressure Poisson equation. More iterations yield a more accurate divergence‑free field but cost more performance. Typical values range from 20 to 100.
+			</description>
+		</method>
+		<method name="get_poisson_iterations" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of Poisson solver iterations.
+			</description>
+		</method>
+		<method name="set_ink_longevity">
+			<return type="void" />
+			<param index="0" name="longevity" type="float" />
+			<description>
+				Sets how long the ink (density) persists. 1.0 means no fading (infinite persistence), lower values cause the ink to fade out over time. The actual decay rate is applied each time step.
+			</description>
+		</method>
+		<method name="get_ink_longevity" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the ink longevity factor.
+			</description>
+		</method>
+		<method name="set_ink_color">
+			<return type="void" />
+			<param index="0" name="color" type="Color" />
+			<description>
+				Sets the color of the ink injected via [method add_impulse] when [param add_ink] is true. The color is multiplied by the density field, so white produces the original color of the injected impulse, while other colors tint it.
+			</description>
+		</method>
+		<method name="get_ink_color" qualifiers="const">
+			<return type="Color" />
+			<description>
+				Returns the current ink color.
+			</description>
+		</method>
+		<method name="set_vorticity_enabled">
+			<return type="void" />
+			<param index="0" name="enabled" type="bool" />
+			<description>
+				Enables or disables vorticity confinement. When enabled, small‑scale swirling motions are enhanced to counteract numerical dissipation, giving the fluid a more turbulent appearance.
+			</description>
+		</method>
+		<method name="is_vorticity_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns whether vorticity confinement is currently enabled.
+			</description>
+		</method>
+		<method name="set_vorticity_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				Sets the strength of the vorticity confinement force. Higher values produce more pronounced swirling. Typical values range from 0.01 to 0.1.
+			</description>
+		</method>
+		<method name="get_vorticity_scale" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the current vorticity confinement scale.
+			</description>
+		</method>
+		<method name="add_impulse">
+			<return type="void" />
+			<param index="0" name="position" type="Vector2" />
+			<param index="1" name="strength" type="Vector2" />
+			<param index="2" name="radius" type="float" />
+			<param index="3" name="add_ink" type="bool" default="true" />
+			<description>
+				Injects a Gaussian‑shaped impulse into the simulation at the specified [param position] (in normalized coordinates 0..1). The [param strength] vector determines the force added to the velocity field. [param radius] controls the spatial extent of the impulse (also in normalized units). If [param add_ink] is true, ink of the current [member ink_color] is also injected at the same location. This method is typically called in response to mouse or touch input to drive the fluid.
+			</description>
+		</method>
+		<method name="reset">
+			<return type="void" />
+			<description>
+				Resets the simulation to its initial state: all velocity, pressure, and density fields are cleared to zero. Any previously drawn boundaries are also cleared.
+			</description>
+		</method>
+		<method name="get_density_texture" qualifiers="const">
+			<return type="Texture2DRD" />
+			<description>
+				Returns a [Texture2DRD] that contains the current density (ink) field. This texture can be assigned to a [Sprite2D] or used in a shader material to visualize the fluid. The texture format is RGBA floating point.
+			</description>
+		</method>
+		<method name="get_velocity_texture" qualifiers="const">
+			<return type="Texture2DRD" />
+			<description>
+				Returns a [Texture2DRD] that contains the current velocity field (red = x component, green = y component). Useful for debugging or advanced shading effects.
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="width" type="int" setter="set_resolution" getter="get_width" default="128">
+			The width of the simulation grid in pixels. Changing this value reallocates GPU resources and resets the simulation. The resolution must be at least 16.
+		</member>
+		<member name="height" type="int" setter="set_resolution" getter="get_height" default="128">
+			The height of the simulation grid in pixels. Changing this value reallocates GPU resources and resets the simulation. The resolution must be at least 16.
+		</member>
+		<member name="timestep" type="float" setter="set_timestep" getter="get_timestep" default="1.0">
+			Simulation time step. Larger values increase speed but may cause instability. Recommended range: 0.5 – 2.0.
+		</member>
+		<member name="grid_scale" type="float" setter="set_grid_scale" getter="get_grid_scale" default="1.0">
+			Physical scale of each grid cell. Typically left at 1.0 unless world units need to be matched.
+		</member>
+		<member name="viscosity" type="float" setter="set_viscosity" getter="get_viscosity" default="0.0">
+			Fluid viscosity. 0 = inviscid; higher values produce thicker, more diffusive flow.
+		</member>
+		<member name="poisson_iterations" type="int" setter="set_poisson_iterations" getter="get_poisson_iterations" default="50">
+			Number of Jacobi iterations for the pressure solver. More iterations give better accuracy at the cost of performance.
+		</member>
+		<member name="ink_longevity" type="float" setter="set_ink_longevity" getter="get_ink_longevity" default="0.995">
+			How long ink persists. 1.0 = never fades; lower values fade faster.
+		</member>
+		<member name="ink_color" type="Color" setter="set_ink_color" getter="get_ink_color" default="Color(1, 1, 1)">
+			Color of ink injected when [method add_impulse] is called with [param add_ink] = true.
+		</member>
+		<member name="vorticity_enabled" type="bool" setter="set_vorticity_enabled" getter="is_vorticity_enabled" default="true">
+			If true, vorticity confinement is applied to enhance turbulence.
+		</member>
+		<member name="vorticity_scale" type="float" setter="set_vorticity_scale" getter="get_vorticity_scale" default="0.035">
+			Strength of the vorticity confinement force. Higher values create more pronounced swirls.
+		</member>
+	</members>
+	<constants>
+	</constants>
 </class>
