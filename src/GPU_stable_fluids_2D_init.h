@@ -11,6 +11,7 @@
 #include "core/gpu_resource_manager.h"
 #include "core/fluid_render_pipeline.h"
 #include "utils/draw_request.h"
+#include "obstacles/fluid_obstacle_drawer.h"
 
 namespace godot {
 
@@ -99,6 +100,7 @@ public:
 	Vector2          world_to_fluid_pos(Vector2 p_world_pos) const;
 	Vector2          sample_velocity(Vector2 p_world_pos) const;
 	Vector2          get_domain_offset() const;
+	GPUResourceManager *get_gpu_resources() { return &_gpu_resources; }
 
 	void _ready() override;
 	void _process(double p_delta) override;
@@ -137,6 +139,7 @@ private:
 	// ---- GPU state ----
 	GPUResourceManager  _gpu_resources;
 	FluidRenderPipeline _render_pipeline;
+	FluidObstacleDrawer _obstacle_drawer;
 	Ref<Texture2DRD>    _output_texture;
 
 	// ---- Domain following ----

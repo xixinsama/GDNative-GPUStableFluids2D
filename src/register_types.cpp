@@ -6,6 +6,9 @@
 #include <godot_cpp/godot.hpp>
 
 #include "GPU_stable_fluids_2D_init.h"
+#include "display/fluid_display_2d.h"
+#include "display/fluid_mouse_interactor_2d.h"
+#include "obstacles/fluid_obstacle_2d.h"
 
 using namespace godot;
 
@@ -14,6 +17,9 @@ void initialize_fluid_sim_module(ModuleInitializationLevel p_level) {
 		return;
 	}
 	ClassDB::register_class<GPUStableFluids2D>();
+	ClassDB::register_class<FluidDisplay2D>();
+	ClassDB::register_class<FluidMouseInteractor2D>();
+	ClassDB::register_class<FluidObstacle2D>();
 }
 
 void uninitialize_fluid_sim_module(ModuleInitializationLevel p_level) {

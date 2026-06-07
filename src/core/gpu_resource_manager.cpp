@@ -68,6 +68,9 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	boundary_pipeline       = create_compute_pipeline("res://shaders/boundary.glsl");
 	vorticity_pipeline      = create_compute_pipeline("res://shaders/vorticity.glsl");
 	shift_texture_pipeline  = create_compute_pipeline("res://shaders/shift_texture.glsl");
+	splat_batch_pipeline    = create_compute_pipeline("res://shaders/splat_batch.glsl");
+	obstacle_force_pipeline = create_compute_pipeline("res://shaders/obstacle_force.glsl");
+	copy_texture_pipeline   = create_compute_pipeline("res://shaders/copy_texture.glsl");
 
 	// --- Storage buffers ---
 	{
@@ -102,6 +105,9 @@ void GPUResourceManager::terminate() {
 	free_pipeline(boundary_pipeline);
 	free_pipeline(vorticity_pipeline);
 	free_pipeline(shift_texture_pipeline);
+	free_pipeline(splat_batch_pipeline);
+	free_pipeline(obstacle_force_pipeline);
+	free_pipeline(copy_texture_pipeline);
 
 	device = nullptr;
 }

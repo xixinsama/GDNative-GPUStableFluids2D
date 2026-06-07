@@ -84,6 +84,8 @@ private:
 	void _step_solve_pressure(int p_iterations);
 	void _step_subtract_pressure_gradient(float p_half_rdx);
 	void _step_apply_boundary();
+	void _step_apply_obstacle_force(float p_dt, float p_force_strength);
+	void _step_copy_obstacle_texture();
 
 	// --- Resources ---
 	GPUResourceManager *_gpu = nullptr;

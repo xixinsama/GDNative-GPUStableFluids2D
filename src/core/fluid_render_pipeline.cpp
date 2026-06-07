@@ -81,8 +81,14 @@ void FluidRenderPipeline::execute(float p_dt, GPUStableFluids2D *p_sim) {
 	// --- Step 7: Apply boundary conditions ---
 	_step_apply_boundary();
 
-	// --- Step 8: Advect color ---
+	// --- Step 8: Apply obstacle forces ---
+	_step_apply_obstacle_force(p_dt, p_sim->get_obstacle_force_strength());
+
+	// --- Step 9: Advect color ---
 	_step_advect_color(p_dt, rdx);
+
+	// --- Step 10: Copy obstacle current → previous ---
+	_step_copy_obstacle_texture();
 }
 
 // ──────────────────────────────────────────────────────────
@@ -284,6 +290,71 @@ void FluidRenderPipeline::_step_apply_boundary() {
 			_gpu->tex_pressure, _gpu->tex_temp, RID(), RID(), _pc_boundary_pressure);
 		_swap_tex_pressure();
 	}
+}
+
+void FluidRenderPipeline::_step_apply_obstacle_force(float p_dt, float p_force_strength) {
+	float pc_data[4] = {
+		(float)_gpu->width, (float)_gpu->height,
+		p_dt, p_force_strength
+	};
+	PackedByteArray pc;
+	pc.resize(16);
+	std::memcpy(pc.ptrw(), pc_data, 16);
+
+	RenderingDevice *rd = _gpu->device;
+	int64_t cl = rd->compute_list_begin();
+	rd->compute_list_bind_compute_pipeline(cl, _gpu->obstacle_force_pipeline.pipeline_id);
+
+	RID us0 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_velocity,
+		0, RenderingDevice::UNIFORM_TYPE_IMAGE);
+	rd->compute_list_bind_uniform_set(cl, us0, 0);
+
+	RID us1 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_temp,
+		1, RenderingDevice::UNIFORM_TYPE_IMAGE);
+	rd->compute_list_bind_uniform_set(cl, us1, 1);
+
+	RID us2 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_obstacle,
+		2, RenderingDevice::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE);
+	rd->compute_list_bind_uniform_set(cl, us2, 2);
+
+	RID us3 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_obstacle_pre,
+		3, RenderingDevice::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE);
+	rd->compute_list_bind_uniform_set(cl, us3, 3);
+
+	rd->compute_list_set_push_constant(cl, pc, pc.size());
+	rd->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
+	rd->compute_list_end();
+
+	_swap_tex_velocity();
+}
+
+void FluidRenderPipeline::_step_copy_obstacle_texture() {
+	float pc_data[2] = { (float)_gpu->width, (float)_gpu->height };
+	PackedByteArray pc;
+	pc.resize(8);
+	std::memcpy(pc.ptrw(), pc_data, 8);
+
+	RenderingDevice *rd = _gpu->device;
+	int64_t cl = rd->compute_list_begin();
+	rd->compute_list_bind_compute_pipeline(cl, _gpu->copy_texture_pipeline.pipeline_id);
+
+	RID us0 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->copy_texture_pipeline.shader_id, _gpu->tex_obstacle,
+		0, RenderingDevice::UNIFORM_TYPE_IMAGE);
+	rd->compute_list_bind_uniform_set(cl, us0, 0);
+
+	RID us1 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->copy_texture_pipeline.shader_id, _gpu->tex_obstacle_pre,
+		1, RenderingDevice::UNIFORM_TYPE_IMAGE);
+	rd->compute_list_bind_uniform_set(cl, us1, 1);
+
+	rd->compute_list_set_push_constant(cl, pc, pc.size());
+	rd->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
+	rd->compute_list_end();
 }
 
 } // namespace godot

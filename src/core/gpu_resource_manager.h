@@ -109,6 +109,9 @@ public:
 	ComputePipeline boundary_pipeline;
 	ComputePipeline vorticity_pipeline;
 	ComputePipeline shift_texture_pipeline;
+	ComputePipeline splat_batch_pipeline;
+	ComputePipeline obstacle_force_pipeline;
+	ComputePipeline copy_texture_pipeline;
 
 	// Metadata
 	int width  = 512;

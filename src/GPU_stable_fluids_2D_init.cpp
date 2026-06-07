@@ -278,6 +278,9 @@ void GPUStableFluids2D::_process(double p_delta) {
 	}
 
 	// Run the full simulation pipeline
+	// Process obstacles (CPU rasterization → GPU upload)
+	_obstacle_drawer.process_frame();
+
 	_render_pipeline.execute((float)p_delta, this);
 
 	// Update output texture
@@ -308,6 +311,8 @@ void GPUStableFluids2D::_initialise_gpu() {
 
 	_output_texture.instantiate();
 	_output_texture->set_texture_rd_rid(_gpu_resources.tex_color);
+
+	_obstacle_drawer.initialize(this);
 
 	_initialized = true;
 	emit_signal("simulation_initialized");
