@@ -2,12 +2,13 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://1780808046xxxx"
-valid=true
+uid="uid://bacy7u6gc1jdp"
+path="res://.godot/imported/subtract.glsl-6b227b1f651b802a3764f1da03c96bca.res"
 
 [deps]
 
 source_file="res://shaders/subtract.glsl"
+dest_files=["res://.godot/imported/subtract.glsl-6b227b1f651b802a3764f1da03c96bca.res"]
 
 [params]
 

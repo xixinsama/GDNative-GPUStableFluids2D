@@ -2,12 +2,13 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://1780808046xxxx"
-valid=true
+uid="uid://bacy7u6gc1jdp"
+path="res://.godot/imported/divergence.glsl-76aef98eb2677abff635c102ddd6cf7e.res"
 
 [deps]
 
 source_file="res://shaders/divergence.glsl"
+dest_files=["res://.godot/imported/divergence.glsl-76aef98eb2677abff635c102ddd6cf7e.res"]
 
 [params]
 

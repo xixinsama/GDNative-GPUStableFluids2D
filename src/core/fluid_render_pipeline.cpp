@@ -1,360 +1,189 @@
 #include "fluid_render_pipeline.h"
 #include "gpu_resource_manager.h"
 #include "GPU_stable_fluids_2D_init.h"
-
 #include "godot_cpp/classes/rendering_device.hpp"
-#include "godot_cpp/variant/typed_array.hpp"
-
 #include <cstring>
 
 namespace godot {
 
-// ──────────────────────────────────────────────────────────
-//  Initialisation
-// ──────────────────────────────────────────────────────────
+using UT = RenderingDevice::UniformType;
+enum { IMG = (int)UT::UNIFORM_TYPE_IMAGE, SMP = (int)UT::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE };
 
-void FluidRenderPipeline::initialize(GPUResourceManager *p_gpu, int p_x_groups, int p_y_groups) {
-	_gpu     = p_gpu;
-	_x_groups = p_x_groups;
-	_y_groups = p_y_groups;
+// ── Init ──────────────────────────────────────────────
 
-	// Pre-allocate all push-constant byte arrays
-	auto make_bytes = [](size_t sz, const void *data) {
-		PackedByteArray pba;
-		pba.resize((int)sz);
-		std::memcpy(pba.ptrw(), data, sz);
-		return pba;
-	};
-
-	// Advection: vec2 resolution(8) + float dt(4) + float rdx(4) = 16 bytes
-	_pc_advection.resize(16);
-	// Jacobi: vec2 resolution(8) + float alpha(4) + float rbeta(4) = 16 bytes
-	_pc_jacobi.resize(16);
-	// Divergence: vec2 resolution(8) + float half_rdx(4) = 12 + pad → 16
-	_pc_divergence.resize(16);
-	// Subtract: same as divergence
-	_pc_subtract.resize(16);
-	// Boundary: vec2 resolution(8) + float scale(4) = 12 + pad → 16
-	_pc_boundary_velocity.resize(16);
-	_pc_boundary_pressure.resize(16);
-	// Vorticity: vec2 resolution(8) + float dt(4) + float vorticity_scale(4) = 16
-	_pc_vorticity.resize(16);
-	// Shift texture: vec2 resolution(8) + vec2 offset(8) = 16
-	_pc_shift.resize(16);
+void FluidRenderPipeline::initialize(GPUResourceManager *p_gpu, int xg, int yg) {
+	_gpu = p_gpu; _x_groups = xg; _y_groups = yg;
+	_pc_adv.resize(16); _pc_jac.resize(16); _pc_div.resize(16); _pc_sub.resize(16);
+	_pc_bv.resize(16); _pc_bp.resize(16); _pc_vor.resize(16); _pc_shift.resize(16);
 }
 
-// ──────────────────────────────────────────────────────────
-//  Main execute — called once per frame on render thread
-// ──────────────────────────────────────────────────────────
+// ── Swap helpers ────────────────────────────────────────
 
-void FluidRenderPipeline::execute(float p_dt, GPUStableFluids2D *p_sim) {
-	if (!_gpu || !_gpu->device) return;
-	if (!_gpu->advect_pipeline.is_valid()) return;
+void FluidRenderPipeline::_swap_velocity() { std::swap(_gpu->tex_velocity, _gpu->tex_temp); }
+void FluidRenderPipeline::_swap_pressure() { std::swap(_gpu->tex_pressure, _gpu->tex_temp); }
+void FluidRenderPipeline::_swap_color()    { std::swap(_gpu->tex_color, _gpu->tex_temp); }
 
-	const float rdx        = 1.0f / p_sim->get_grid_scale();
-	const float half_rdx   = rdx * 0.5f;
-	const float viscosity  = p_sim->get_viscosity();
-	const int   pressure_iter = p_sim->get_poisson_iterations();
+// ── Uniform set helper (no cache — clean each frame) ──
 
-	// --- Step 1: Advect velocity ---
-	_step_advect_velocity(p_dt, rdx);
-
-	// --- Step 2: Diffuse velocity ---
-	if (viscosity > 0.000001f) {
-		_step_diffuse_velocity(p_dt, viscosity, 10);
-	}
-
-	// --- Step 3: Vorticity confinement ---
-	if (p_sim->is_vorticity_enabled()) {
-		_step_apply_vorticity(p_dt, p_sim->get_vorticity_scale());
-	}
-
-	// --- Step 4: Compute divergence ---
-	_step_compute_divergence(half_rdx);
-
-	// --- Step 5: Solve pressure (Jacobi) ---
-	_step_solve_pressure(pressure_iter);
-
-	// --- Step 6: Subtract pressure gradient ---
-	_step_subtract_pressure_gradient(half_rdx);
-
-	// --- Step 7: Apply boundary conditions ---
-	_step_apply_boundary();
-
-	// --- Step 8: Apply obstacle forces ---
-	_step_apply_obstacle_force(p_dt, p_sim->get_obstacle_force_strength());
-
-	// --- Step 9: Advect color ---
-	_step_advect_color(p_dt, rdx);
-
-	// --- Step 10: Copy obstacle current → previous ---
-	_step_copy_obstacle_texture();
+RID FluidRenderPipeline::_make_us(const ComputePipeline &pp, RID tex, uint32_t set_idx, int utype) {
+	Ref<RDUniform> u; u.instantiate();
+	u->set_uniform_type((UT)utype);
+	u->set_binding(0);
+	if (utype == SMP) { u->add_id(_gpu->sampler); u->add_id(tex); }
+	else               { u->add_id(tex); }
+	return _gpu->device->uniform_set_create(Array::make(u), pp.shader_id, set_idx);
 }
 
-// ──────────────────────────────────────────────────────────
-//  Ping-pong swap helpers
-// ──────────────────────────────────────────────────────────
+// ── Main dispatch ─────────────────────────────────────
 
-void FluidRenderPipeline::_swap_tex_velocity() {
-	std::swap(_gpu->tex_velocity, _gpu->tex_temp);
-}
-void FluidRenderPipeline::_swap_tex_pressure() {
-	std::swap(_gpu->tex_pressure, _gpu->tex_temp);
-}
-void FluidRenderPipeline::_swap_tex_color() {
-	std::swap(_gpu->tex_color, _gpu->tex_temp);
-}
-
-// ──────────────────────────────────────────────────────────
-//  Low-level dispatch with uniform-set bindings
-// ──────────────────────────────────────────────────────────
-
-void FluidRenderPipeline::_dispatch_compute_with_bindings(
-		const ComputePipeline &p_pipeline,
-		RID p_sampler_tex,      // set=0 sampler2D
-		RID p_img0,             // set=1 restrict image2D
-		RID p_img1,             // set=2 restrict image2D (may be invalid)
-		RID p_img2,             // set=3 restrict image2D (may be invalid)
-		const PackedByteArray &p_push_constant)
-{
-	RenderingDevice *rd = _gpu->device;
-	const int64_t cl = rd->compute_list_begin();
-
-	rd->compute_list_bind_compute_pipeline(cl, p_pipeline.pipeline_id);
-
-	// Set 0 — sampler texture
-	if (p_sampler_tex.is_valid()) {
-		RID us0 = _gpu->get_or_create_cached_uniform_set(
-			p_pipeline.shader_id, p_sampler_tex,
-			0, RenderingDevice::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE);
-		rd->compute_list_bind_uniform_set(cl, us0, 0);
-	}
-
-	// Set 1 — first image
-	if (p_img0.is_valid()) {
-		RID us1 = _gpu->get_or_create_cached_uniform_set(
-			p_pipeline.shader_id, p_img0,
-			1, RenderingDevice::UNIFORM_TYPE_IMAGE);
-		rd->compute_list_bind_uniform_set(cl, us1, 1);
-	}
-
-	// Set 2 — second image
-	if (p_img1.is_valid()) {
-		RID us2 = _gpu->get_or_create_cached_uniform_set(
-			p_pipeline.shader_id, p_img1,
-			2, RenderingDevice::UNIFORM_TYPE_IMAGE);
-		rd->compute_list_bind_uniform_set(cl, us2, 2);
-	}
-
-	// Set 3 — third image
-	if (p_img2.is_valid()) {
-		RID us3 = _gpu->get_or_create_cached_uniform_set(
-			p_pipeline.shader_id, p_img2,
-			3, RenderingDevice::UNIFORM_TYPE_IMAGE);
-		rd->compute_list_bind_uniform_set(cl, us3, 3);
-	}
-
-	// Push constants
-	rd->compute_list_set_push_constant(cl, p_push_constant, p_push_constant.size());
-
-	rd->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
-	rd->compute_list_end();
-}
-
-// ──────────────────────────────────────────────────────────
-//  Pipeline steps
-// ──────────────────────────────────────────────────────────
-
-void FluidRenderPipeline::_step_advect_velocity(float p_dt, float p_rdx) {
-	float *data = (float *)_pc_advection.ptrw();
-	data[0] = (float)_gpu->width;   // resolution.x
-	data[1] = (float)_gpu->height;  // resolution.y
-	data[2] = p_dt;
-	data[3] = p_rdx;
-
-	// Read velocity via sampler, write to temp
-	_dispatch_compute_with_bindings(_gpu->advect_pipeline,
-		_gpu->tex_velocity, _gpu->tex_temp, RID(), RID(), _pc_advection);
-	_swap_tex_velocity();
-}
-
-void FluidRenderPipeline::_step_diffuse_velocity(float p_dt, float p_viscosity, int p_iterations) {
-	float dx   = 1.0f;
-	float alpha = (dx * dx) / (p_viscosity * p_dt);
-	float rbeta = 1.0f / (4.0f + alpha);
-
-	float *data = (float *)_pc_jacobi.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = alpha;
-	data[3] = rbeta;
-
-	for (int i = 0; i < p_iterations; i++) {
-		// Read velocity (previous solution), source=velocity, write to temp
-		_dispatch_compute_with_bindings(_gpu->jacobi_pipeline,
-			_gpu->tex_velocity, _gpu->tex_velocity, _gpu->tex_temp, RID(), _pc_jacobi);
-		_swap_tex_velocity();
-	}
-}
-
-void FluidRenderPipeline::_step_advect_color(float p_dt, float p_rdx) {
-	float *data = (float *)_pc_advection.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = p_dt;
-	data[3] = p_rdx;
-
-	// Read color via sampler, use velocity as velocity field, write to temp
-	_dispatch_compute_with_bindings(_gpu->advect_pipeline,
-		_gpu->tex_color, _gpu->tex_velocity, _gpu->tex_temp, RID(), _pc_advection);
-	_swap_tex_color();
-}
-
-void FluidRenderPipeline::_step_apply_vorticity(float p_dt, float p_vorticity_scale) {
-	float *data = (float *)_pc_vorticity.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = p_dt;
-	data[3] = p_vorticity_scale;
-
-	// Vorticity modifies velocity in-place
-	_dispatch_compute_with_bindings(_gpu->vorticity_pipeline,
-		_gpu->tex_velocity, _gpu->tex_temp, RID(), RID(), _pc_vorticity);
-	_swap_tex_velocity();
-}
-
-void FluidRenderPipeline::_step_compute_divergence(float p_half_rdx) {
-	float *data = (float *)_pc_divergence.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = p_half_rdx;
-	data[3] = 0.0f; // pad
-
-	_dispatch_compute_with_bindings(_gpu->divergence_pipeline,
-		_gpu->tex_velocity, _gpu->tex_divergence, RID(), RID(), _pc_divergence);
-}
-
-void FluidRenderPipeline::_step_solve_pressure(int p_iterations) {
-	float alpha = -1.0f;
-	float rbeta = 0.25f;
-
-	float *data = (float *)_pc_jacobi.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = alpha;
-	data[3] = rbeta;
-
-	for (int i = 0; i < p_iterations; i++) {
-		// Solve: pressure_new = (sum_neighbors + alpha*divergence) * rbeta
-		// Read pressure (x), source=divergence (b), write to temp
-		_dispatch_compute_with_bindings(_gpu->jacobi_pipeline,
-			_gpu->tex_pressure, _gpu->tex_divergence, _gpu->tex_temp, RID(), _pc_jacobi);
-		_swap_tex_pressure();
-	}
-}
-
-void FluidRenderPipeline::_step_subtract_pressure_gradient(float p_half_rdx) {
-	float *data = (float *)_pc_subtract.ptrw();
-	data[0] = (float)_gpu->width;
-	data[1] = (float)_gpu->height;
-	data[2] = p_half_rdx;
-	data[3] = 0.0f; // pad
-
-	// velocity_new = velocity - grad(pressure)
-	_dispatch_compute_with_bindings(_gpu->subtract_pipeline,
-		_gpu->tex_pressure, _gpu->tex_velocity, _gpu->tex_temp, RID(), _pc_subtract);
-	_swap_tex_velocity();
-}
-
-void FluidRenderPipeline::_step_apply_boundary() {
-	// Velocity boundary: scale = -1.0 (no-slip)
-	{
-		float *data = (float *)_pc_boundary_velocity.ptrw();
-		data[0] = (float)_gpu->width;
-		data[1] = (float)_gpu->height;
-		data[2] = -1.0f;
-		data[3] = 0.0f; // pad
-		_dispatch_compute_with_bindings(_gpu->boundary_pipeline,
-			_gpu->tex_velocity, _gpu->tex_temp, RID(), RID(), _pc_boundary_velocity);
-		_swap_tex_velocity();
-	}
-
-	// Pressure boundary: scale = 1.0 (Neumann)
-	{
-		float *data = (float *)_pc_boundary_pressure.ptrw();
-		data[0] = (float)_gpu->width;
-		data[1] = (float)_gpu->height;
-		data[2] = 1.0f;
-		data[3] = 0.0f; // pad
-		_dispatch_compute_with_bindings(_gpu->boundary_pipeline,
-			_gpu->tex_pressure, _gpu->tex_temp, RID(), RID(), _pc_boundary_pressure);
-		_swap_tex_pressure();
-	}
-}
-
-void FluidRenderPipeline::_step_apply_obstacle_force(float p_dt, float p_force_strength) {
-	float pc_data[4] = {
-		(float)_gpu->width, (float)_gpu->height,
-		p_dt, p_force_strength
-	};
-	PackedByteArray pc;
-	pc.resize(16);
-	std::memcpy(pc.ptrw(), pc_data, 16);
-
+void FluidRenderPipeline::_dispatch(const ComputePipeline &pp, const PackedByteArray &pc,
+                                     RID t0, int u0, RID t1, int u1, RID t2, int u2, RID t3, int u3) {
 	RenderingDevice *rd = _gpu->device;
 	int64_t cl = rd->compute_list_begin();
-	rd->compute_list_bind_compute_pipeline(cl, _gpu->obstacle_force_pipeline.pipeline_id);
+	rd->compute_list_bind_compute_pipeline(cl, pp.pipeline_id);
 
-	RID us0 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_velocity,
-		0, RenderingDevice::UNIFORM_TYPE_IMAGE);
-	rd->compute_list_bind_uniform_set(cl, us0, 0);
-
-	RID us1 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_temp,
-		1, RenderingDevice::UNIFORM_TYPE_IMAGE);
-	rd->compute_list_bind_uniform_set(cl, us1, 1);
-
-	RID us2 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_obstacle,
-		2, RenderingDevice::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE);
-	rd->compute_list_bind_uniform_set(cl, us2, 2);
-
-	RID us3 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->obstacle_force_pipeline.shader_id, _gpu->tex_obstacle_pre,
-		3, RenderingDevice::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE);
-	rd->compute_list_bind_uniform_set(cl, us3, 3);
+	RID us[4] = {};
+	if (t0.is_valid()) { us[0] = _make_us(pp, t0, 0, u0); rd->compute_list_bind_uniform_set(cl, us[0], 0); }
+	if (t1.is_valid()) { us[1] = _make_us(pp, t1, 1, u1); rd->compute_list_bind_uniform_set(cl, us[1], 1); }
+	if (t2.is_valid()) { us[2] = _make_us(pp, t2, 2, u2); rd->compute_list_bind_uniform_set(cl, us[2], 2); }
+	if (t3.is_valid()) { us[3] = _make_us(pp, t3, 3, u3); rd->compute_list_bind_uniform_set(cl, us[3], 3); }
 
 	rd->compute_list_set_push_constant(cl, pc, pc.size());
 	rd->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
 	rd->compute_list_end();
 
-	_swap_tex_velocity();
+	// Free temp uniform sets
+	for (int i = 0; i < 4; i++) if (us[i].is_valid()) rd->free_rid(us[i]);
 }
 
-void FluidRenderPipeline::_step_copy_obstacle_texture() {
-	float pc_data[2] = { (float)_gpu->width, (float)_gpu->height };
-	PackedByteArray pc;
-	pc.resize(8);
-	std::memcpy(pc.ptrw(), pc_data, 8);
+// ── Execute ────────────────────────────────────────────
 
-	RenderingDevice *rd = _gpu->device;
-	int64_t cl = rd->compute_list_begin();
-	rd->compute_list_bind_compute_pipeline(cl, _gpu->copy_texture_pipeline.pipeline_id);
+void FluidRenderPipeline::execute(float dt, GPUStableFluids2D *sim) {
+	if (!_gpu || !_gpu->device || !_gpu->advect_pipeline.is_valid()) return;
+	float rdx = 1.0f / sim->get_grid_scale();
+	_step_advect_velocity(dt, rdx);
+	if (sim->get_viscosity() > 0.000001f) _step_diffuse_velocity(dt, sim->get_viscosity(), 10);
+	if (sim->is_vorticity_enabled()) _step_vorticity(dt, sim->get_vorticity_scale());
+	_step_divergence(rdx * 0.5f);
+	_step_solve_pressure(sim->get_poisson_iterations());
+	_step_subtract_gradient(rdx * 0.5f);
+	_step_boundary();
+	_step_obstacle_force(dt, sim->get_obstacle_force_strength());
+	_step_advect_color(dt, rdx);
+	_step_copy_obstacle();
+}
 
-	RID us0 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->copy_texture_pipeline.shader_id, _gpu->tex_obstacle,
-		0, RenderingDevice::UNIFORM_TYPE_IMAGE);
-	rd->compute_list_bind_uniform_set(cl, us0, 0);
+// ── Helpers to fill push constants ─────────────────────
 
-	RID us1 = _gpu->get_or_create_cached_uniform_set(
-		_gpu->copy_texture_pipeline.shader_id, _gpu->tex_obstacle_pre,
-		1, RenderingDevice::UNIFORM_TYPE_IMAGE);
-	rd->compute_list_bind_uniform_set(cl, us1, 1);
+static void _fill_pc(PackedByteArray &pba, const void *data, int sz) {
+	std::memcpy(pba.ptrw(), data, sz);
+}
 
-	rd->compute_list_set_push_constant(cl, pc, pc.size());
-	rd->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
-	rd->compute_list_end();
+// ── Steps — each uses correct uniform types for its shader layout ──
+// Shader layouts:
+//   advect:    set0=sampler2D, set1=image2D, set2=image2D
+//   jacobi:    set0=image2D,   set1=image2D, set2=image2D
+//   divergence:set0=image2D,   set1=image2D
+//   subtract:  set0=image2D,   set1=image2D, set2=image2D
+//   boundary:  set0=image2D,   set1=image2D
+//   vorticity: set0=image2D,   set1=image2D
+//   shift:     set0=sampler2D, set1=image2D
+//   obstacle:  set0=image2D,   set1=image2D, set2=sampler2D, set3=sampler2D
+//   copy_tex:  set0=image2D,   set1=image2D
+
+void FluidRenderPipeline::_step_advect_velocity(float dt, float rdx) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, rdx};
+	_fill_pc(_pc_adv, d, 16);
+	// set0=sampler(velocity), set1=image(temp), set2=image(unused)
+	_dispatch(_gpu->advect_pipeline, _pc_adv,
+		_gpu->tex_velocity, SMP, _gpu->tex_temp, IMG);
+	_swap_velocity();
+}
+
+void FluidRenderPipeline::_step_diffuse_velocity(float dt, float visc, int iter) {
+	float dx = 1.0f, alpha = (dx * dx) / (visc * dt), rbeta = 1.0f / (4.0f + alpha);
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, alpha, rbeta};
+	_fill_pc(_pc_jac, d, 16);
+	for (int i = 0; i < iter; i++) {
+		// set0=image(velocity x), set1=image(velocity b), set2=image(temp)
+		_dispatch(_gpu->jacobi_pipeline, _pc_jac,
+			_gpu->tex_velocity, IMG, _gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
+		_swap_velocity();
+	}
+}
+
+void FluidRenderPipeline::_step_advect_color(float dt, float rdx) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, rdx};
+	_fill_pc(_pc_adv, d, 16);
+	// set0=sampler(color), set1=image(velocity as field), set2=image(temp write)
+	_dispatch(_gpu->advect_pipeline, _pc_adv,
+		_gpu->tex_color, SMP, _gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
+	_swap_color();
+}
+
+void FluidRenderPipeline::_step_vorticity(float dt, float scale) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, scale};
+	_fill_pc(_pc_vor, d, 16);
+	_dispatch(_gpu->vorticity_pipeline, _pc_vor,
+		_gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
+	_swap_velocity();
+}
+
+void FluidRenderPipeline::_step_divergence(float half_rdx) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, half_rdx, 0};
+	_fill_pc(_pc_div, d, 16);
+	_dispatch(_gpu->divergence_pipeline, _pc_div,
+		_gpu->tex_velocity, IMG, _gpu->tex_divergence, IMG);
+}
+
+void FluidRenderPipeline::_step_solve_pressure(int iter) {
+	float alpha = -1.0f, rbeta = 0.25f;
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, alpha, rbeta};
+	_fill_pc(_pc_jac, d, 16);
+	for (int i = 0; i < iter; i++) {
+		_dispatch(_gpu->jacobi_pipeline, _pc_jac,
+			_gpu->tex_pressure, IMG, _gpu->tex_divergence, IMG, _gpu->tex_temp, IMG);
+		_swap_pressure();
+	}
+}
+
+void FluidRenderPipeline::_step_subtract_gradient(float half_rdx) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, half_rdx, 0};
+	_fill_pc(_pc_sub, d, 16);
+	_dispatch(_gpu->subtract_pipeline, _pc_sub,
+		_gpu->tex_pressure, IMG, _gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
+	_swap_velocity();
+}
+
+void FluidRenderPipeline::_step_boundary() {
+	// Velocity: scale=-1
+	{ float d[4] = {(float)_gpu->width, (float)_gpu->height, -1.0f, 0};
+	  _fill_pc(_pc_bv, d, 16);
+	  _dispatch(_gpu->boundary_pipeline, _pc_bv,
+		_gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
+	  _swap_velocity(); }
+	// Pressure: scale=+1
+	{ float d[4] = {(float)_gpu->width, (float)_gpu->height, 1.0f, 0};
+	  _fill_pc(_pc_bp, d, 16);
+	  _dispatch(_gpu->boundary_pipeline, _pc_bp,
+		_gpu->tex_pressure, IMG, _gpu->tex_temp, IMG);
+	  _swap_pressure(); }
+}
+
+void FluidRenderPipeline::_step_obstacle_force(float dt, float strength) {
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, strength};
+	PackedByteArray pc; pc.resize(16); _fill_pc(pc, d, 16);
+	_dispatch(_gpu->obstacle_force_pipeline, pc,
+		_gpu->tex_velocity, IMG, _gpu->tex_temp, IMG,
+		_gpu->tex_obstacle, SMP, _gpu->tex_obstacle_pre, SMP);
+	_swap_velocity();
+}
+
+void FluidRenderPipeline::_step_copy_obstacle() {
+	float d[2] = {(float)_gpu->width, (float)_gpu->height};
+	PackedByteArray pc; pc.resize(8); _fill_pc(pc, d, 8);
+	_dispatch(_gpu->copy_texture_pipeline, pc,
+		_gpu->tex_obstacle, IMG, _gpu->tex_obstacle_pre, IMG);
 }
 
 } // namespace godot

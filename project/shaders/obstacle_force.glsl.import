@@ -1,8 +1,14 @@
 [remap]
+
 importer="glsl"
 type="RDShaderFile"
-uid="uid://c1780818954"
-valid=true
+uid="uid://c178082aa54"
+path="res://.godot/imported/obstacle_force.glsl-fa2a33a64e35efc821df543e9571efd8.res"
+
 [deps]
+
 source_file="res://shaders/obstacle_force.glsl"
+dest_files=["res://.godot/imported/obstacle_force.glsl-fa2a33a64e35efc821df543e9571efd8.res"]
+
 [params]
+
