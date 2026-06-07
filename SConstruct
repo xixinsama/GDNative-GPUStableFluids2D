@@ -4,19 +4,10 @@ import sys
 
 from methods import print_error
 
-
-libname = "GDNative-GPUStableFluids2D"
+libname = "GPUStableFluids2D"
 projectdir = "project"
 
 localEnv = Environment(tools=["default"], PLATFORM="windows")
-
-# Build profiles can be used to decrease compile times.
-# You can either specify "disabled_classes", OR
-# explicitly specify "enabled_classes" which disables all other classes.
-# Modify the example file as needed and uncomment the line below or
-# manually specify the build_profile parameter when running SCons.
-
-# localEnv["build_profile"] = "build_profile.json"
 
 customs = ["custom.py"]
 customs = [os.path.abspath(path) for path in customs]
@@ -37,8 +28,10 @@ Run the following command to download godot-cpp:
 
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
-env.Append(CPPPATH=["src/"])
-sources = Glob("src/*.cpp")
+env.Append(CPPPATH=["src/", "src/core/", "src/utils/"])
+
+# Gather sources from src/ and subdirectories
+sources = Glob("src/*.cpp") + Glob("src/core/*.cpp") + Glob("src/utils/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     try:
@@ -47,8 +40,6 @@ if env["target"] in ["editor", "template_debug"]:
     except AttributeError:
         print("Not including class reference as we're targeting a pre-4.3 baseline.")
 
-# .dev doesn't inhibit compatibility, so we don't need to key it.
-# .universal just means "compatible with all relevant arches" so we don't need to key it.
 suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 
 lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), libname, suffix, env.subst('$SHLIBSUFFIX'))

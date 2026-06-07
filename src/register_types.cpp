@@ -9,29 +9,29 @@
 
 using namespace godot;
 
-void initialize_gpu_fluids_module(ModuleInitializationLevel p_level) {
-    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-        return;
-    }
-    ClassDB::register_class<GPUStableFluids2D>();
+void initialize_fluid_sim_module(ModuleInitializationLevel p_level) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+		return;
+	}
+	ClassDB::register_class<GPUStableFluids2D>();
 }
 
-void uninitialize_gpu_fluids_module(ModuleInitializationLevel p_level) {
+void uninitialize_fluid_sim_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
 }
 
 extern "C" {
-GDExtensionBool GDE_EXPORT example_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address,
-                                                GDExtensionClassLibraryPtr p_library,
-                                                GDExtensionInitialization *r_initialization) {
-    godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+GDExtensionBool GDE_EXPORT fluid_sim_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address,
+                                                    GDExtensionClassLibraryPtr p_library,
+                                                    GDExtensionInitialization *r_initialization) {
+	godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
 
-    init_obj.register_initializer(initialize_gpu_fluids_module);
-    init_obj.register_terminator(uninitialize_gpu_fluids_module);
-    init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+	init_obj.register_initializer(initialize_fluid_sim_module);
+	init_obj.register_terminator(uninitialize_fluid_sim_module);
+	init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
 
-    return init_obj.init();
+	return init_obj.init();
 }
 }
