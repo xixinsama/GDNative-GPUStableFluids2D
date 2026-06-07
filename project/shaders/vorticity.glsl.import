@@ -2,12 +2,13 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://1780808046xxxx"
-valid=true
+uid="uid://bacy7u6gc1jdp"
+path="res://.godot/imported/vorticity.glsl-3089c856034860c24751d5080eb53e85.res"
 
 [deps]
 
 source_file="res://shaders/vorticity.glsl"
+dest_files=["res://.godot/imported/vorticity.glsl-3089c856034860c24751d5080eb53e85.res"]
 
 [params]
 

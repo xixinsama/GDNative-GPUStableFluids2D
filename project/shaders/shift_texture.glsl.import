@@ -2,12 +2,13 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://1780808046xxxx"
-valid=true
+uid="uid://bacy7u6gc1jdp"
+path="res://.godot/imported/shift_texture.glsl-554584b980b3e4aa1beb5824960ccd39.res"
 
 [deps]
 
 source_file="res://shaders/shift_texture.glsl"
+dest_files=["res://.godot/imported/shift_texture.glsl-554584b980b3e4aa1beb5824960ccd39.res"]
 
 [params]
 

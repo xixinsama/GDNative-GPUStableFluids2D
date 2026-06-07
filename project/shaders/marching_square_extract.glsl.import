@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bgt7pa4kfi02r"
+path="res://.godot/imported/marching_square_extract.glsl-d56b7d69b12a20a4e6f95d2363eb6b75.res"
+
+[deps]
+
+source_file="res://shaders/marching_square_extract.glsl"
+dest_files=["res://.godot/imported/marching_square_extract.glsl-d56b7d69b12a20a4e6f95d2363eb6b75.res"]
+
+[params]
+
