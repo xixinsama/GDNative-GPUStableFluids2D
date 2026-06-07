@@ -30,8 +30,10 @@ void GPUStableFluids2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_resolution", "width", "height"), &GPUStableFluids2D::set_resolution);
 	ClassDB::bind_method(D_METHOD("get_width"),  &GPUStableFluids2D::get_width);
 	ClassDB::bind_method(D_METHOD("get_height"), &GPUStableFluids2D::get_height);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "width",  PROPERTY_HINT_RANGE, "32,2048"),  "set_resolution", "get_width");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "height", PROPERTY_HINT_RANGE, "32,2048"),  "set_resolution", "get_height");
+	ClassDB::bind_method(D_METHOD("set_width", "w"), &GPUStableFluids2D::set_width);
+	ClassDB::bind_method(D_METHOD("set_height", "h"), &GPUStableFluids2D::set_height);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "width",  PROPERTY_HINT_RANGE, "32,2048"),  "set_width", "get_width");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "height", PROPERTY_HINT_RANGE, "32,2048"),  "set_height", "get_height");
 
 	ClassDB::bind_method(D_METHOD("set_timestep", "timestep"), &GPUStableFluids2D::set_timestep);
 	ClassDB::bind_method(D_METHOD("get_timestep"), &GPUStableFluids2D::get_timestep);
@@ -128,6 +130,8 @@ void GPUStableFluids2D::_bind_methods() {
 // ──────────────────────────────────────────────────────────
 
 void  GPUStableFluids2D::set_resolution(int p_width, int p_height) { width = p_width; height = p_height; _needs_recreate = true; }
+void  GPUStableFluids2D::set_width(int p_width)   { width = p_width; _needs_recreate = true; }
+void  GPUStableFluids2D::set_height(int p_height)  { height = p_height; _needs_recreate = true; }
 int   GPUStableFluids2D::get_width()  const { return width; }
 int   GPUStableFluids2D::get_height() const { return height; }
 void  GPUStableFluids2D::set_timestep(float v)          { timestep = v; }
@@ -287,10 +291,6 @@ void GPUStableFluids2D::_process(double p_delta) {
 	if (_output_texture.is_valid()) {
 		_output_texture->set_texture_rd_rid(_gpu_resources.tex_color);
 	}
-
-	// Submit all GPU work
-	rd->submit();
-	rd->sync();
 
 	_draw_request_count = 0;
 }

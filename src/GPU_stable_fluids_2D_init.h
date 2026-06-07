@@ -29,6 +29,8 @@ public:
 
 	// ---- Property accessors ----
 	void  set_resolution(int p_width, int p_height);
+	void  set_width(int p_width);
+	void  set_height(int p_height);
 	int   get_width()  const;
 	int   get_height() const;
 

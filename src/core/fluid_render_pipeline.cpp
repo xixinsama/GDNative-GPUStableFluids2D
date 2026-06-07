@@ -94,9 +94,9 @@ static void _fill_pc(PackedByteArray &pba, const void *data, int sz) {
 void FluidRenderPipeline::_step_advect_velocity(float dt, float rdx) {
 	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, rdx};
 	_fill_pc(_pc_adv, d, 16);
-	// set0=sampler(velocity), set1=image(temp), set2=image(unused)
+	// advect: set0=sampler(field), set1=image(vel_readonly), set2=image(output)
 	_dispatch(_gpu->advect_pipeline, _pc_adv,
-		_gpu->tex_velocity, SMP, _gpu->tex_temp, IMG);
+		_gpu->tex_velocity, SMP, _gpu->tex_velocity, IMG, _gpu->tex_temp, IMG);
 	_swap_velocity();
 }
 
@@ -180,8 +180,8 @@ void FluidRenderPipeline::_step_obstacle_force(float dt, float strength) {
 }
 
 void FluidRenderPipeline::_step_copy_obstacle() {
-	float d[2] = {(float)_gpu->width, (float)_gpu->height};
-	PackedByteArray pc; pc.resize(8); _fill_pc(pc, d, 8);
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, 0, 0};
+	PackedByteArray pc; pc.resize(16); _fill_pc(pc, d, 16);
 	_dispatch(_gpu->copy_texture_pipeline, pc,
 		_gpu->tex_obstacle, IMG, _gpu->tex_obstacle_pre, IMG);
 }

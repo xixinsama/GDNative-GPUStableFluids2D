@@ -1,64 +1,61 @@
-[gd_scene load_steps=6 format=3 uid="uid://demo_main_v3"]
+[gd_scene load_steps=6 format=3 uid="uid://doterv5up4xcc"]
 
-[ext_resource type="Script" path="res://perf_hud.gd" id="1_perf"]
-[ext_resource type="Script" path="res://demo_controller.gd" id="2_ctrl"]
-[ext_resource type="Script" path="res://graph_drawer.gd" id="3_graph"]
-
-[sub_resource type="CircleShape2D" id="circle"]
-radius = 48.0
+[ext_resource type="Script" uid="uid://dne0368pvbxpa" path="res://perf_hud.gd" id="1_perf"]
+[ext_resource type="Script" uid="uid://bweqm5rdams8" path="res://demo_controller.gd" id="2_ctrl"]
+[ext_resource type="Script" uid="uid://cvu8xj67sxfqs" path="res://graph_drawer.gd" id="3_graph"]
 
 [sub_resource type="RectangleShape2D" id="rect"]
 size = Vector2(200, 24)
+
+[sub_resource type="CircleShape2D" id="circle"]
+radius = 48.0
 
 [node name="DemoMain" type="Node2D"]
 script = ExtResource("2_ctrl")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.5, 0.5)
 
 [node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="."]
-width = 512
-height = 512
-timestep = 1.0
-poisson_iterations = 40
-viscosity = 0.0
-vorticity_enabled = true
-vorticity_scale = 0.4
 ink_color = Color(0.3, 0.6, 1, 1)
-clear_color = Color(0, 0, 0, 0)
-fluid_world_size = Vector2(1920, 1080)
-follow_mode = 0
 follow_path = NodePath("../Camera2D")
 
 [node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D"]
 brush_size = 6.0
 velocity_scale = 0.15
-continuous_draw = true
-interaction_mode = 0
 
 [node name="FluidDisplay2D" type="FluidDisplay2D" parent="."]
 sim_source_path = NodePath("../GPUStableFluids2D")
-centered = false
-display_mode = 0
-auto_size = true
 position = Vector2(-960, -540)
 
 [node name="SmokeEmitter" type="FluidEmitter2D" parent="."]
-position = Vector2(-400, -300)
-active = true
 emission_preset = 3
-emit_interval = 0.06
+emit_color = Color(0.3, 0.3, 0.3, 0.4)
+emit_velocity = Vector2(0, -0.5)
+color_radius = 2.0
+velocity_radius = 1.0
+emit_interval = 0.08
+swirl_strength = 0.3
+position = Vector2(-400, -300)
 
 [node name="FireEmitter" type="FluidEmitter2D" parent="."]
-position = Vector2(200, -400)
-active = true
 emission_preset = 6
+emit_color = Color(1, 0.4, 0.1, 0.7)
+emit_velocity = Vector2(0, -2)
+color_radius = 1.5
+velocity_radius = 2.0
 emit_interval = 0.03
+swirl_strength = 0.5
+position = Vector2(200, -400)
 
 [node name="FountainEmitter" type="FluidEmitter2D" parent="."]
-position = Vector2(-200, -450)
-active = true
 emission_preset = 4
+emit_color = Color(0.4, 0.7, 1, 0.6)
+emit_velocity = Vector2(0, -4)
+color_radius = 2.0
+velocity_radius = 1.5
 emit_interval = 0.02
+position = Vector2(-200, -450)
 
 [node name="ObstaclePlatform" type="StaticBody2D" parent="."]
 position = Vector2(0, 300)
@@ -78,37 +75,48 @@ linear_velocity = Vector2(50, 0)
 shape = SubResource("circle")
 
 [node name="FluidObstacle2D" type="FluidObstacle2D" parent="MovingObstacle"]
-auto_detect_velocity = true
 
 [node name="PerfHUD" type="Control" parent="."]
-layout_mode = 1
+layout_mode = 3
 anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_perf")
 
 [node name="Panel" type="Panel" parent="PerfHUD"]
+modulate = Color(0, 0, 0, 0.75)
 layout_mode = 0
 offset_right = 230.0
 offset_bottom = 160.0
-modulate = Color(0, 0, 0, 0.75)
 
 [node name="VBox" type="VBoxContainer" parent="PerfHUD/Panel"]
 layout_mode = 1
 anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 8.0
 offset_top = 4.0
 offset_right = -4.0
 offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="FPSLabel" type="Label" parent="PerfHUD/Panel/VBox"]
+layout_mode = 2
 text = "FPS: --"
 
 [node name="FTLabel" type="Label" parent="PerfHUD/Panel/VBox"]
+layout_mode = 2
 text = "FT: -- ms"
 
 [node name="GridLabel" type="Label" parent="PerfHUD/Panel/VBox"]
+layout_mode = 2
 text = "Grid: --"
 
 [node name="DrawLabel" type="Label" parent="PerfHUD/Panel/VBox"]
+layout_mode = 2
 text = "Draw: --"
 
 [node name="Graph" type="Control" parent="PerfHUD/Panel/VBox"]
@@ -117,37 +125,54 @@ size_flags_vertical = 3
 script = ExtResource("3_graph")
 
 [node name="ControlPanel" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 6
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 190.0
 offset_top = -160.0
+offset_right = 190.0
+grow_horizontal = 0
+grow_vertical = 2
 
 [node name="Panel" type="Panel" parent="ControlPanel"]
+modulate = Color(0, 0, 0, 0.75)
 layout_mode = 1
 anchors_preset = 15
-modulate = Color(0, 0, 0, 0.75)
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="ControlPanel/Panel"]
 layout_mode = 1
 anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 8.0
 offset_top = 6.0
 offset_right = -4.0
 offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Title" type="Label" parent="ControlPanel/Panel/VBox"]
+layout_mode = 2
 text = "GPUStableFluids2D"
 
 [node name="H1" type="Label" parent="ControlPanel/Panel/VBox"]
+layout_mode = 2
 text = "Mouse L: Draw fluid"
 
 [node name="H2" type="Label" parent="ControlPanel/Panel/VBox"]
+layout_mode = 2
 text = "1/2/3: Burst effects"
 
 [node name="H3" type="Label" parent="ControlPanel/Panel/VBox"]
+layout_mode = 2
 text = "4/5: Brush +/-"
 
 [node name="H4" type="Label" parent="ControlPanel/Panel/VBox"]
+layout_mode = 2
 text = "H: Toggle panel | R: Reset"

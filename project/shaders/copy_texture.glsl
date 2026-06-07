@@ -7,13 +7,15 @@ layout(rgba32f, set = 0, binding = 0) uniform restrict readonly image2D src_tex;
 layout(rgba32f, set = 1, binding = 0) uniform restrict writeonly image2D dst_tex;
 
 layout(push_constant, std430) uniform Params {
-    vec2 resolution;
+	vec2 resolution;
+	float pad0;
+	float pad1;
 } params;
 
 void main() {
-    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    if (pixel.x >= int(params.resolution.x) || pixel.y >= int(params.resolution.y)) return;
+	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	if (pixel.x >= int(params.resolution.x) || pixel.y >= int(params.resolution.y)) return;
 
-    vec4 val = imageLoad(src_tex, pixel);
-    imageStore(dst_tex, pixel, val);
+	vec4 val = imageLoad(src_tex, pixel);
+	imageStore(dst_tex, pixel, val);
 }

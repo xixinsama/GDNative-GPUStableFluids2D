@@ -2,13 +2,12 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://bacy7u6gc1jdp"
-path="res://.godot/imported/advect.glsl-2a3e0c2d5a4198ec3767764ae07542ed.res"
+uid="uid://1780808046xxxx"
+valid=true
 
 [deps]
 
 source_file="res://shaders/advect.glsl"
-dest_files=["res://.godot/imported/advect.glsl-2a3e0c2d5a4198ec3767764ae07542ed.res"]
 
 [params]
 
