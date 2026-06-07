@@ -25,18 +25,18 @@ func _process(dt: float) -> void:
 		_fps_hist.pop_front()
 
 	# FPS label with color coding
-	var fps_lbl := _labels.get("fps")
+	var fps_lbl = _labels.get("fps")
 	if fps_lbl:
 		fps_lbl.text = "FPS: %d" % int(fps)
 		fps_lbl.modulate = Color.GREEN if fps >= 55 else (Color.ORANGE if fps >= 30 else Color.RED)
 
 	# Frame time
-	var ft_lbl := _labels.get("ft")
+	var ft_lbl = _labels.get("ft")
 	if ft_lbl:
 		ft_lbl.text = "FT: %.2f ms" % (dt * 1000.0)
 
 	# Simulation stats
-	var grid_lbl := _labels.get("grid")
+	var grid_lbl = _labels.get("grid")
 	if grid_lbl:
 		var t := get_tree()
 		var sim = t.get_first_node_in_group("fluid_sim_nodes") if t else null
@@ -49,7 +49,7 @@ func _process(dt: float) -> void:
 			grid_lbl.text = "Grid: -- (no sim)"
 
 	# Draw stats
-	var draw_lbl := _labels.get("draw")
+	var draw_lbl = _labels.get("draw")
 	if draw_lbl:
 		draw_lbl.text = "Draw: %d | VRAM: %dMB" % [
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),

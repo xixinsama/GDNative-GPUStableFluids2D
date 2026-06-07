@@ -2,13 +2,12 @@
 
 importer="glsl"
 type="RDShaderFile"
-uid="uid://bacy7u6gc1jdp"
-path="res://.godot/imported/boundary.glsl-95a058f2e26afb4e00568f665b5e33cc.res"
+uid="uid://1780808046xxxx"
+valid=true
 
 [deps]
 
 source_file="res://shaders/boundary.glsl"
-dest_files=["res://.godot/imported/boundary.glsl-95a058f2e26afb4e00568f665b5e33cc.res"]
 
 [params]
 
