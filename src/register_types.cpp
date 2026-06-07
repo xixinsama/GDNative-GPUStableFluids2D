@@ -9,6 +9,12 @@
 #include "display/fluid_display_2d.h"
 #include "display/fluid_mouse_interactor_2d.h"
 #include "obstacles/fluid_obstacle_2d.h"
+#include "emitters/fluid_emitter_2d.h"
+#include "emitters/fluid_force_emitter_2d.h"
+#include "lighting/fluid_light_occluder_2d.h"
+#include "obstacles/fluid_tile_map_obstacle_2d.h"
+#include "core/fluid_domain.h"
+#include "display/fluid_vorticity_visualizer_2d.h"
 
 using namespace godot;
 
@@ -20,6 +26,12 @@ void initialize_fluid_sim_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<FluidDisplay2D>();
 	ClassDB::register_class<FluidMouseInteractor2D>();
 	ClassDB::register_class<FluidObstacle2D>();
+	ClassDB::register_class<FluidEmitter2D>();
+	ClassDB::register_class<FluidForceEmitter2D>();
+	ClassDB::register_class<FluidLightOccluder2D>();
+	ClassDB::register_class<FluidTileMapObstacle2D>();
+	ClassDB::register_class<FluidDomain2D>();
+	ClassDB::register_class<FluidVorticityVisualizer2D>();
 }
 
 void uninitialize_fluid_sim_module(ModuleInitializationLevel p_level) {
