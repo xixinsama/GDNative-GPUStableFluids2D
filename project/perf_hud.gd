@@ -10,7 +10,7 @@ extends Control
 var _fps_hist: Array[float] = []
 var _max_samp := 180
 
-func _ready() -> void: graph.draw.connect(_draw_graph)
+func _ready() -> void: pass
 
 func _process(dt: float) -> void:
 	var fps := Engine.get_frames_per_second()
@@ -33,17 +33,7 @@ func _process(dt: float) -> void:
 		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 		int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / (1024*1024))]
 
-	graph.queue_redraw()
+	if graph.has_method("set_data"): graph.fps_hist = _fps_hist; graph.queue_redraw()
 
 func _find_sim():
 	var t := get_tree(); return t.get_first_node_in_group("fluid_sim_nodes") if t else null
-
-func _draw_graph() -> void:
-	if _fps_hist.size() < 2: return
-	var r := graph.get_rect(); var w := r.size.x; var h := r.size.y
-	var step := w / _fps_hist.size(); var mf := 144.0
-	var pts := PackedVector2Array()
-	for i in _fps_hist.size():
-		pts.append(Vector2(i * step, h - (_fps_hist[i] / mf) * h))
-	graph.draw_polyline(pts, Color.GREEN, 1.5)
-	graph.draw_line(Vector2(0, h - (60.0/mf)*h), Vector2(w, h - (60.0/mf)*h), Color(1,1,1,0.2))

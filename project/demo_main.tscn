@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://demo_main_fluid"]
+[gd_scene load_steps=8 format=3 uid="uid://demo_main_fluid"]
 
 [ext_resource type="Script" path="res://perf_hud.gd" id="1_perf"]
 [ext_resource type="Script" path="res://demo_controller.gd" id="2_ctrl"]
-[ext_resource type="Texture2D" path="res://icon.svg" id="3_icon"]
+[ext_resource type="Script" path="res://graph_drawer.gd" id="3_graph"]
+[ext_resource type="Texture2D" path="res://icon.svg" id="4_icon"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D"]
 radius = 48.0
@@ -170,6 +171,7 @@ add_theme_font_size_override("font_size", 11)
 [node name="Graph" type="Control" parent="PerfHUD/Panel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+script = ExtResource("3_graph")
 
 ; --- Control Panel ---
 [node name="ControlPanel" type="Control" parent="."]
