@@ -1,31 +1,19 @@
-[gd_scene load_steps=7 format=3 uid="uid://demo_main_fluid_v2"]
+[gd_scene load_steps=6 format=3 uid="uid://demo_main_v3"]
 
 [ext_resource type="Script" path="res://perf_hud.gd" id="1_perf"]
 [ext_resource type="Script" path="res://demo_controller.gd" id="2_ctrl"]
 [ext_resource type="Script" path="res://graph_drawer.gd" id="3_graph"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D"]
+[sub_resource type="CircleShape2D" id="circle"]
 radius = 48.0
 
-[sub_resource type="RectangleShape2D" id="RectShape"]
+[sub_resource type="RectangleShape2D" id="rect"]
 size = Vector2(200, 24)
 
 [node name="DemoMain" type="Node2D"]
 script = ExtResource("2_ctrl")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(0, 0)
-
-[node name="CanvasModulate" type="CanvasModulate" parent="."]
-color = Color(0.08, 0.08, 0.1, 1)
-
-[node name="PointLight2D" type="PointLight2D" parent="."]
-position = Vector2(0, -250)
-energy = 2.0
-color = Color(1, 0.95, 0.8, 1)
-texture_scale = 5.0
-height = 2.0
-shadow_enabled = true
 
 [node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="."]
 width = 512
@@ -76,7 +64,7 @@ emit_interval = 0.02
 position = Vector2(0, 300)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ObstaclePlatform"]
-shape = SubResource("RectShape")
+shape = SubResource("rect")
 
 [node name="FluidObstacle2D" type="FluidObstacle2D" parent="ObstaclePlatform"]
 auto_detect_velocity = false
@@ -87,16 +75,10 @@ gravity_scale = 0.0
 linear_velocity = Vector2(50, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MovingObstacle"]
-shape = SubResource("CircleShape2D")
+shape = SubResource("circle")
 
 [node name="FluidObstacle2D" type="FluidObstacle2D" parent="MovingObstacle"]
 auto_detect_velocity = true
-
-[node name="FluidLightOccluder2D" type="FluidLightOccluder2D" parent="."]
-sim_source_path = NodePath("../GPUStableFluids2D")
-density_threshold = 0.08
-max_contours = 6
-update_frequency = 20
 
 [node name="PerfHUD" type="Control" parent="."]
 layout_mode = 1
@@ -105,8 +87,8 @@ script = ExtResource("1_perf")
 
 [node name="Panel" type="Panel" parent="PerfHUD"]
 layout_mode = 0
-offset_right = 220.0
-offset_bottom = 155.0
+offset_right = 230.0
+offset_bottom = 160.0
 modulate = Color(0, 0, 0, 0.75)
 
 [node name="VBox" type="VBoxContainer" parent="PerfHUD/Panel"]
@@ -119,19 +101,15 @@ offset_bottom = -4.0
 
 [node name="FPSLabel" type="Label" parent="PerfHUD/Panel/VBox"]
 text = "FPS: --"
-add_theme_font_size_override("font_size", 13)
 
 [node name="FTLabel" type="Label" parent="PerfHUD/Panel/VBox"]
 text = "FT: -- ms"
-add_theme_font_size_override("font_size", 11)
 
-[node name="SimLabel" type="Label" parent="PerfHUD/Panel/VBox"]
+[node name="GridLabel" type="Label" parent="PerfHUD/Panel/VBox"]
 text = "Grid: --"
-add_theme_font_size_override("font_size", 11)
 
 [node name="DrawLabel" type="Label" parent="PerfHUD/Panel/VBox"]
 text = "Draw: --"
-add_theme_font_size_override("font_size", 11)
 
 [node name="Graph" type="Control" parent="PerfHUD/Panel/VBox"]
 layout_mode = 2
@@ -143,8 +121,8 @@ layout_mode = 1
 anchors_preset = 6
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_right = 180.0
-offset_top = -180.0
+offset_right = 190.0
+offset_top = -160.0
 
 [node name="Panel" type="Panel" parent="ControlPanel"]
 layout_mode = 1
@@ -154,29 +132,22 @@ modulate = Color(0, 0, 0, 0.75)
 [node name="VBox" type="VBoxContainer" parent="ControlPanel/Panel"]
 layout_mode = 1
 anchors_preset = 15
-offset_left = 6.0
-offset_top = 4.0
+offset_left = 8.0
+offset_top = 6.0
 offset_right = -4.0
 offset_bottom = -4.0
 
 [node name="Title" type="Label" parent="ControlPanel/Panel/VBox"]
-text = "CONTROLS"
-add_theme_font_size_override("font_size", 12)
+text = "GPUStableFluids2D"
 
 [node name="H1" type="Label" parent="ControlPanel/Panel/VBox"]
-text = "Mouse Left: Draw"
-add_theme_font_size_override("font_size", 10)
+text = "Mouse L: Draw fluid"
 
 [node name="H2" type="Label" parent="ControlPanel/Panel/VBox"]
-text = "1/2/3: Burst | 4/5: Brush"
-add_theme_font_size_override("font_size", 10)
+text = "1/2/3: Burst effects"
 
 [node name="H3" type="Label" parent="ControlPanel/Panel/VBox"]
-text = "H: HUD | R: Reset"
-add_theme_font_size_override("font_size", 10)
+text = "4/5: Brush +/-"
 
-[node name="TitleLabel" type="Label" parent="."]
-text = "GPUStableFluids2D"
-position = Vector2(-960, -530)
-add_theme_font_size_override("font_size", 18)
-modulate = Color(1, 1, 1, 0.7)
+[node name="H4" type="Label" parent="ControlPanel/Panel/VBox"]
+text = "H: Toggle panel | R: Reset"
