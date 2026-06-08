@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidEmitter2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		流体粒子发射器，支持持续、爆发、周期性发射模式，内置 7 种预设效果。
+	</brief_description>
+	<description>
+		FluidEmitter2D 是流体的"源"。它在指定位置以配置的频率和模式向流体域注入颜色和速度。适合模拟烟雾、火焰、喷泉、爆炸等效果。
+
+		[b]发射模式（Emission Mode）：[/b]
+		- [b]Continuous[/b]（持续）：按 [member emit_interval] 间隔持续发射
+		- [b]Burst[/b]（爆发）：一次性发射 [member burst_count] 个粒子，然后停止
+		- [b]Periodic[/b]（周期性）：以 [member emit_interval] 为周期，每次爆发 [member burst_count] 个粒子
+
+		[b]发射形状（Emission Shape）：[/b]
+		- [b]Point[/b]：从节点位置点发射
+		- [b]Circle[/b]：从圆形区域随机发射
+		- [b]Rect[/b]：从矩形区域随机发射
+		- [b]LineSegment[/b]：从线段上随机发射
+		- [b]TextureMask[/b]：按纹理遮罩形状发射
+
+		[b]预设效果：[/b]
+		- [b]Explosion[/b]：向外爆炸，高速径向速度
+		- [b]Mist[/b]：柔和薄雾，低速扩散
+		- [b]Smoke[/b]：上升烟雾，带漩涡
+		- [b]Fountain[/b]：向上喷泉，受重力下落
+		- [b]Steam[/b]：蒸汽上升，柔和扩散
+		- [b]Fire[/b]：火焰效果，带上升和漩涡
+
+		[b]注意：[/b]如果将 [member sim_target_path] 留空，发射器会自动使用场景中第一个加入 "fluid_sim_nodes" 组的模拟节点，或查找父节点链。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_active">
+			<return type="void" />
+			<param index="0" name="active" type="bool" />
+			<description>启用或暂停发射器。</description>
+		</method>
+		<method name="is_active" qualifiers="const">
+			<return type="bool" />
+			<description>返回发射器是否处于活动状态。</description>
+		</method>
+		<method name="set_emission_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>设置发射模式：0=Continuous, 1=Burst, 2=Periodic。</description>
+		</method>
+		<method name="get_emission_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前发射模式。</description>
+		</method>
+		<method name="set_emission_shape">
+			<return type="void" />
+			<param index="0" name="shape" type="int" />
+			<description>设置发射形状：0=Point, 1=Circle, 2=Rect, 3=LineSegment, 4=TextureMask。</description>
+		</method>
+		<method name="get_emission_shape" qualifiers="const">
+			<return type="int" />
+			<description>返回当前发射形状。</description>
+		</method>
+		<method name="set_emission_preset">
+			<return type="void" />
+			<param index="0" name="preset" type="int" />
+			<description>
+				加载预设参数。0=Custom, 1=Explosion, 2=Mist, 3=Smoke, 4=Fountain, 5=Steam, 6=Fire。
+				选择预设后会自动覆盖颜色、速度、半径等参数。设置为 Custom 后可手动调整。
+			</description>
+		</method>
+		<method name="get_emission_preset" qualifiers="const">
+			<return type="int" />
+			<description>返回当前预设。</description>
+		</method>
+		<method name="set_emit_color">
+			<return type="void" />
+			<param index="0" name="color" type="Color" />
+			<description>设置发射颜色。Alpha 通道控制密度。</description>
+		</method>
+		<method name="get_emit_color" qualifiers="const">
+			<return type="Color" />
+			<description>返回当前发射颜色。</description>
+		</method>
+		<method name="set_emit_velocity">
+			<return type="void" />
+			<param index="0" name="velocity" type="Vector2" />
+			<description>设置发射基础速度矢量。实际速度可能叠加形状和速度模式的影响。</description>
+		</method>
+		<method name="get_emit_velocity" qualifiers="const">
+			<return type="Vector2" />
+			<description>返回当前发射速度。</description>
+		</method>
+		<method name="set_color_radius">
+			<return type="void" />
+			<param index="0" name="radius" type="float" />
+			<description>设置颜色 splat 的半径。</description>
+		</method>
+		<method name="get_color_radius" qualifiers="const">
+			<return type="float" />
+			<description>返回当前颜色半径。</description>
+		</method>
+		<method name="set_velocity_radius">
+			<return type="void" />
+			<param index="0" name="radius" type="float" />
+			<description>设置速度 splat 的半径。</description>
+		</method>
+		<method name="get_velocity_radius" qualifiers="const">
+			<return type="float" />
+			<description>返回当前速度半径。</description>
+		</method>
+		<method name="set_emit_interval">
+			<return type="void" />
+			<param index="0" name="interval" type="float" />
+			<description>设置发射间隔（秒）。仅对 Continuous 和 Periodic 模式有效。</description>
+		</method>
+		<method name="get_emit_interval" qualifiers="const">
+			<return type="float" />
+			<description>返回当前发射间隔。</description>
+		</method>
+		<method name="set_burst_count">
+			<return type="void" />
+			<param index="0" name="count" type="int" />
+			<description>设置每次爆发发射的粒子数。</description>
+		</method>
+		<method name="get_burst_count" qualifiers="const">
+			<return type="int" />
+			<description>返回当前爆发粒子数。</description>
+		</method>
+		<method name="set_shape_size">
+			<return type="void" />
+			<param index="0" name="size" type="Vector2" />
+			<description>设置发射形状的尺寸。用于 Circle（半径）、Rect（宽高）、LineSegment（线段长）。</description>
+		</method>
+		<method name="get_shape_size" qualifiers="const">
+			<return type="Vector2" />
+			<description>返回当前形状尺寸。</description>
+		</method>
+		<method name="set_velocity_pattern">
+			<return type="void" />
+			<param index="0" name="pattern" type="int" />
+			<description>设置速度模式：0=Directional（定向）, 1=Radial（径向）, 2=Random（随机）。</description>
+		</method>
+		<method name="get_velocity_pattern" qualifiers="const">
+			<return type="int" />
+			<description>返回当前速度模式。</description>
+		</method>
+		<method name="set_swirl_strength">
+			<return type="void" />
+			<param index="0" name="strength" type="float" />
+			<description>设置漩涡强度。用于 Smoke、Fire 等预设中产生旋转运动。</description>
+		</method>
+		<method name="get_swirl_strength" qualifiers="const">
+			<return type="float" />
+			<description>返回当前漩涡强度。</description>
+		</method>
+		<method name="set_lifetime">
+			<return type="void" />
+			<param index="0" name="lifetime" type="float" />
+			<description>设置发射器的生命周期（秒）。超时后自动停止发射。0 = 无限。</description>
+		</method>
+		<method name="get_lifetime" qualifiers="const">
+			<return type="float" />
+			<description>返回当前生命周期。</description>
+		</method>
+		<method name="set_auto_destroy">
+			<return type="void" />
+			<param index="0" name="enable" type="bool" />
+			<description>设置生命周期结束后是否自动销毁节点（queue_free）。</description>
+		</method>
+		<method name="is_auto_destroy" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否启用自动销毁。</description>
+		</method>
+		<method name="set_sim_target_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置目标 [GPUStableFluids2D] 节点路径。</description>
+		</method>
+		<method name="get_sim_target_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前目标节点路径。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="active" type="bool" setter="set_active" getter="is_active" default="true">
+			发射器是否处于活动状态。
+		</member>
+		<member name="emission_mode" type="int" setter="set_emission_mode" getter="get_emission_mode" default="0">
+			发射模式：0=Continuous, 1=Burst, 2=Periodic。
+		</member>
+		<member name="emission_shape" type="int" setter="set_emission_shape" getter="get_emission_shape" default="0">
+			发射形状：0=Point, 1=Circle, 2=Rect, 3=LineSegment, 4=TextureMask。
+		</member>
+		<member name="emission_preset" type="int" setter="set_emission_preset" getter="get_emission_preset" default="0">
+			预设：0=Custom, 1=Explosion, 2=Mist, 3=Smoke, 4=Fountain, 5=Steam, 6=Fire。
+		</member>
+		<member name="emit_color" type="Color" setter="set_emit_color" getter="get_emit_color" default="Color(0.5, 0.5, 0.5, 0.5)">
+			发射颜色。
+		</member>
+		<member name="emit_velocity" type="Vector2" setter="set_emit_velocity" getter="get_emit_velocity" default="Vector2(0, -1)">
+			发射基础速度。
+		</member>
+		<member name="color_radius" type="float" setter="set_color_radius" getter="get_color_radius" default="0.5">
+			颜色 splat 半径。
+		</member>
+		<member name="velocity_radius" type="float" setter="set_velocity_radius" getter="get_velocity_radius" default="0.8">
+			速度 splat 半径。
+		</member>
+		<member name="emit_interval" type="float" setter="set_emit_interval" getter="get_emit_interval" default="0.05">
+			发射间隔（秒）。
+		</member>
+		<member name="burst_count" type="int" setter="set_burst_count" getter="get_burst_count" default="16">
+			每次爆发的粒子数。
+		</member>
+		<member name="shape_size" type="Vector2" setter="set_shape_size" getter="get_shape_size" default="Vector2(1, 1)">
+			发射形状尺寸。
+		</member>
+		<member name="velocity_pattern" type="int" setter="set_velocity_pattern" getter="get_velocity_pattern" default="0">
+			速度模式：0=Directional, 1=Radial, 2=Random。
+		</member>
+		<member name="swirl_strength" type="float" setter="set_swirl_strength" getter="get_swirl_strength" default="0.0">
+			漩涡强度。
+		</member>
+		<member name="lifetime" type="float" setter="set_lifetime" getter="get_lifetime" default="0.0">
+			生命周期（秒）。0=无限。
+		</member>
+		<member name="auto_destroy" type="bool" setter="set_auto_destroy" getter="is_auto_destroy" default="false">
+			生命周期结束后是否自动销毁。
+		</member>
+		<member name="sim_target_path" type="NodePath" setter="set_sim_target_path" getter="get_sim_target_path" default="NodePath()">
+			目标模拟节点路径。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

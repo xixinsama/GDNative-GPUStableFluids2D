@@ -3,13 +3,113 @@
 [ext_resource type="Script" uid="uid://dne0368pvbxpa" path="res://perf_hud.gd" id="1_perf"]
 [ext_resource type="Script" uid="uid://bweqm5rdams8" path="res://demo_controller.gd" id="2_ctrl"]
 [ext_resource type="Script" uid="uid://cvu8xj67sxfqs" path="res://graph_drawer.gd" id="3_graph"]
-[ext_resource type="Texture2D" uid="uid://dbx66sovxd1" path="res://icon.svg" id="4_57v55"]
 
 [sub_resource type="RectangleShape2D" id="rect"]
 size = Vector2(200, 24)
 
 [sub_resource type="CircleShape2D" id="circle"]
 radius = 48.0
+
+[sub_resource type="Animation" id="Animation_oodlx"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ObstaclePlatform:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(0, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ObstaclePlatform:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(300, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/2/type = "bezier"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("MovingObstacle:position:x")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(-311, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/3/type = "bezier"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("MovingObstacle:position:y")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(42, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_57v55"]
+resource_name = "new_animation"
+loop_mode = 2
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ObstaclePlatform:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(0, -0.25, 0, 0.25, 0, -417, -0.16666667, 69.5, 0, 0),
+"times": PackedFloat32Array(0, 1)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ObstaclePlatform:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(300, -0.25, 0, 0.25, 0, -181, -0.16666667, 80.16667, 0, 0),
+"times": PackedFloat32Array(0, 1)
+}
+tracks/2/type = "bezier"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("MovingObstacle:position:x")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"handle_modes": PackedInt32Array(2, 2, 2),
+"points": PackedFloat32Array(-311, -0.25, 0, 0.25, 0, 133, -0.09, -74, 0, 0, 524, -0.07666667, -65.16667, 0, 0),
+"times": PackedFloat32Array(0, 0.54, 1)
+}
+tracks/3/type = "bezier"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("MovingObstacle:position:y")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"handle_modes": PackedInt32Array(2, 2, 2),
+"points": PackedFloat32Array(42, -0.25, 0, 0.25, 0, -154, -0.09, 32.666668, 0, 0, 79, -0.07666667, -38.833336, 0, 0),
+"times": PackedFloat32Array(0, 0.54, 1)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_7b5ns"]
+_data = {
+&"RESET": SubResource("Animation_oodlx"),
+&"new_animation": SubResource("Animation_57v55")
+}
 
 [node name="DemoMain" type="Node2D" unique_id=1242195940]
 script = ExtResource("2_ctrl")
@@ -116,11 +216,11 @@ layout_mode = 2
 text = "H: Toggle panel | R: Reset"
 
 [node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=532233298]
-ink_color = Color(0.7302159, 0.730216, 0.73021597, 1)
 follow_path = NodePath("../Camera2D")
 
 [node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=1777825315]
 sim_target_path = NodePath("..")
+draw_color = Color(1, 1, 0.29803923, 1)
 brush_size = 6.0
 velocity_scale = 0.15
 
@@ -136,16 +236,17 @@ color_radius = 2.0
 velocity_radius = 1.0
 emit_interval = 0.08
 swirl_strength = 0.3
+sim_target_path = NodePath("../GPUStableFluids2D")
 position = Vector2(-329, 131)
 
 [node name="FireEmitter" type="FluidEmitter2D" parent="." unique_id=718244690]
-emission_preset = 6
-emit_color = Color(1, 0.4, 0.1, 0.7)
-emit_velocity = Vector2(0, -2)
-color_radius = 1.5
-velocity_radius = 2.0
-emit_interval = 0.03
-swirl_strength = 0.5
+emit_color = Color(0.3254902, 0, 0.42745098, 0.9882353)
+emit_velocity = Vector2(0, 300)
+color_radius = 4.0
+emit_interval = 0.1
+swirl_strength = 0.3
+auto_destroy = true
+sim_target_path = NodePath("../GPUStableFluids2D")
 position = Vector2(386, 221)
 
 [node name="FountainEmitter" type="FluidEmitter2D" parent="." unique_id=550061578]
@@ -155,6 +256,7 @@ emit_velocity = Vector2(0, -4)
 color_radius = 2.0
 velocity_radius = 1.5
 emit_interval = 0.02
+sim_target_path = NodePath("../GPUStableFluids2D")
 position = Vector2(375, -107)
 
 [node name="ObstaclePlatform" type="StaticBody2D" parent="." unique_id=784856426]
@@ -167,9 +269,8 @@ shape = SubResource("rect")
 auto_detect_velocity = false
 
 [node name="MovingObstacle" type="RigidBody2D" parent="." unique_id=404926356]
-position = Vector2(150, -100)
+position = Vector2(-311, 42)
 gravity_scale = 0.0
-linear_velocity = Vector2(50, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MovingObstacle" unique_id=1994772989]
 shape = SubResource("circle")
@@ -178,6 +279,6 @@ shape = SubResource("circle")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=2054465259]
 
-[node name="Icon" type="Sprite2D" parent="." unique_id=1810005110]
-position = Vector2(-267, 21)
-texture = ExtResource("4_57v55")
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=121735921]
+libraries/ = SubResource("AnimationLibrary_7b5ns")
+autoplay = &"new_animation"

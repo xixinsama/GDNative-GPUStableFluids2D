@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidLightOccluder2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		将流体密度场转换为 Godot 2D 光照遮挡器，使流体能够遮挡场景中的 Light2D 光源。
+	</brief_description>
+	<description>
+		FluidLightOccluder2D 桥接了流体模拟与 Godot 内置 2D 光照系统。它定期从 [GPUStableFluids2D] 读取密度场，使用 Marching Square 算法提取密度轮廓，然后将轮廓多边形创建为 [LightOccluder2D] 子节点。
+
+		[b]工作原理：[/b]
+		1. 按 [member update_frequency] 频率（默认每秒 15 次）从模拟节点读取密度数据
+		2. 使用密度阈值 [member density_threshold] 确定流体边界
+		3. 提取轮廓多边形，使用 [member simplify_tolerance] 简化
+		4. 创建 LightOccluder2D 子节点，应用 [member occluder_light_mask]
+		5. 旧遮挡器在下次更新前被清除
+
+		[b]性能注意：[/b]
+		- 轮廓提取在 CPU 端进行，频繁更新可能影响性能
+		- [member max_contours] 限制创建的遮挡器数量，防止过多多边形
+		- [member downscale_factor] 在提取前降低密度场采样分辨率以减少 CPU 负载
+		- 建议 [member update_frequency] 设为 10~30 Hz，而非每帧更新
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_sim_source_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置 [GPUStableFluids2D] 模拟源节点路径。</description>
+		</method>
+		<method name="get_sim_source_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前模拟源路径。</description>
+		</method>
+		<method name="set_density_threshold">
+			<return type="void" />
+			<param index="0" name="threshold" type="float" />
+			<description>设置密度阈值。密度高于此值的区域被视为流体（产生遮挡）。默认 0.1。</description>
+		</method>
+		<method name="get_density_threshold" qualifiers="const">
+			<return type="float" />
+			<description>返回当前密度阈值。</description>
+		</method>
+		<method name="set_max_contours">
+			<return type="void" />
+			<param index="0" name="count" type="int" />
+			<description>设置最大遮挡器（轮廓）数量。默认 8。</description>
+		</method>
+		<method name="get_max_contours" qualifiers="const">
+			<return type="int" />
+			<description>返回当前最大轮廓数。</description>
+		</method>
+		<method name="set_update_frequency">
+			<return type="void" />
+			<param index="0" name="hz" type="int" />
+			<description>设置更新频率（Hz）。默认 15。设为 60 表示每帧更新。</description>
+		</method>
+		<method name="get_update_frequency" qualifiers="const">
+			<return type="int" />
+			<description>返回当前更新频率。</description>
+		</method>
+		<method name="set_simplify_tolerance">
+			<return type="void" />
+			<param index="0" name="tolerance" type="float" />
+			<description>设置轮廓简化容差。值越大，轮廓越简单（顶点越少），但精度越低。默认 0.1。</description>
+		</method>
+		<method name="get_simplify_tolerance" qualifiers="const">
+			<return type="float" />
+			<description>返回当前简化容差。</description>
+		</method>
+		<method name="set_occluder_light_mask">
+			<return type="void" />
+			<param index="0" name="mask" type="int" />
+			<description>设置遮挡器的光照遮罩层。对应 Light2D 的 range_layer 属性。默认 1。</description>
+		</method>
+		<method name="get_occluder_light_mask" qualifiers="const">
+			<return type="int" />
+			<description>返回当前光照遮罩。</description>
+		</method>
+		<method name="set_downscale_factor">
+			<return type="void" />
+			<param index="0" name="factor" type="int" />
+			<description>设置降采样因子。在轮廓提取前缩小密度场以减少 CPU 负载。默认 2。值越大，提取越快但精度越低。</description>
+		</method>
+		<method name="get_downscale_factor" qualifiers="const">
+			<return type="int" />
+			<description>返回当前降采样因子。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="sim_source_path" type="NodePath" setter="set_sim_source_path" getter="get_sim_source_path" default="NodePath()">模拟源节点路径。</member>
+		<member name="density_threshold" type="float" setter="set_density_threshold" getter="get_density_threshold" default="0.1">密度阈值。</member>
+		<member name="max_contours" type="int" setter="set_max_contours" getter="get_max_contours" default="8">最大遮挡器数量。</member>
+		<member name="update_frequency" type="int" setter="set_update_frequency" getter="get_update_frequency" default="15">更新频率（Hz）。</member>
+		<member name="simplify_tolerance" type="float" setter="set_simplify_tolerance" getter="get_simplify_tolerance" default="0.1">轮廓简化容差。</member>
+		<member name="occluder_light_mask" type="int" setter="set_occluder_light_mask" getter="get_occluder_light_mask" default="1">光照遮罩层。</member>
+		<member name="downscale_factor" type="int" setter="set_downscale_factor" getter="get_downscale_factor" default="2">降采样因子。</member>
+	</members>
+	<constants>
+	</constants>
+</class>

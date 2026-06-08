@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidTileMapObstacle2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		将 TileMapLayer 自动转换为流体障碍物数据，用于创建复杂的静态流体边界。
+	</brief_description>
+	<description>
+		FluidTileMapObstacle2D 桥接了 Godot 的 TileMap 系统和流体模拟的障碍物系统。它读取指定 TileMapLayer 的瓦片数据，将其光栅化为障碍物纹理，使 TileMap 的墙壁、地面等自动成为流体的不可穿透边界。
+
+		[b]与 FluidObstacle2D 的区别：[/b]
+		- [FluidObstacle2D] 适用于少量动态障碍物（每个节点一个障碍物）
+		- FluidTileMapObstacle2D 适用于大量静态瓦片障碍物（整个 TileMap 转换为一张纹理）
+
+		[b]障碍物模式（Obstacle Mode）：[/b]
+		- [b]AllTiles[/b]（所有瓦片）：TileMap 中所有有瓦片的格子都是障碍物
+		- [b]LayerSpecific[/b]（特定层）：仅指定 [member physics_layer_index] 的图层
+		- [b]PhysicsLayer[/b]（物理层）：使用物理碰撞形状作为障碍物
+
+		[b]填充模式（Fill Mode）：[/b]
+		- [b]Opaque[/b]（不透明）：整个瓦片格子为实心障碍物
+		- [b]PerTileShape[/b]（按瓦片形状）：根据瓦片的实际纹理形状（透明/不透明像素）
+		- [b]CollisionShape[/b]（碰撞形状）：使用瓦片关联的碰撞形状
+
+		[b]使用步骤：[/b]
+		1. 在场景中创建 TileMapLayer 并绘制瓦片
+		2. 添加 FluidTileMapObstacle2D 节点
+		3. 设置 [member tile_map_path] 指向 TileMapLayer
+		4. 选择合适的 [member obstacle_mode] 和 [member fill_mode]
+		5. 运行场景，瓦片将自动转换为流体障碍物
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_tile_map_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置要转换的 TileMapLayer 节点路径。</description>
+		</method>
+		<method name="get_tile_map_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前 TileMapLayer 路径。</description>
+		</method>
+		<method name="set_obstacle_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>设置障碍物模式：0=AllTiles, 1=LayerSpecific, 2=PhysicsLayer。</description>
+		</method>
+		<method name="get_obstacle_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前障碍物模式。</description>
+		</method>
+		<method name="set_fill_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>设置填充模式：0=Opaque, 1=PerTileShape, 2=CollisionShape。</description>
+		</method>
+		<method name="get_fill_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前填充模式。</description>
+		</method>
+		<method name="set_physics_layer_index">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<description>设置 LayerSpecific 模式下的图层索引。</description>
+		</method>
+		<method name="get_physics_layer_index" qualifiers="const">
+			<return type="int" />
+			<description>返回当前图层索引。</description>
+		</method>
+		<method name="set_terrain_set">
+			<return type="void" />
+			<param index="0" name="set" type="int" />
+			<description>设置要使用的 Terrain Set 索引。-1 表示使用所有 Terrain Set。</description>
+		</method>
+		<method name="get_terrain_set" qualifiers="const">
+			<return type="int" />
+			<description>返回当前 Terrain Set 索引。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="tile_map_path" type="NodePath" setter="set_tile_map_path" getter="get_tile_map_path" default="NodePath()">
+			目标 TileMapLayer 节点路径。
+		</member>
+		<member name="obstacle_mode" type="int" setter="set_obstacle_mode" getter="get_obstacle_mode" default="0">
+			障碍物模式：0=AllTiles, 1=LayerSpecific, 2=PhysicsLayer。
+		</member>
+		<member name="fill_mode" type="int" setter="set_fill_mode" getter="get_fill_mode" default="0">
+			填充模式：0=Opaque, 1=PerTileShape, 2=CollisionShape。
+		</member>
+		<member name="physics_layer_index" type="int" setter="set_physics_layer_index" getter="get_physics_layer_index" default="0">
+			LayerSpecific 模式使用的图层索引。
+		</member>
+		<member name="terrain_set" type="int" setter="set_terrain_set" getter="get_terrain_set" default="-1">
+			地形集索引。-1=全部。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

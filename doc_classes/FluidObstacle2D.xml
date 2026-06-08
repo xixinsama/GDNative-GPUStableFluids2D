@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidObstacle2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		流体障碍物节点，可附着于 StaticBody2D/RigidBody2D 或独立使用，自动被障碍物绘制系统发现并光栅化到 GPU 障碍物纹理。
+	</brief_description>
+	<description>
+		FluidObstacle2D 为流体模拟定义不可穿透的固体边界。所有加入 "fluid_obstacles" 组的节点会在每帧被 [FluidObstacleDrawer] 扫描，光栅化为障碍物纹理（16 字节/像素），并上传到 GPU 用于模拟管线中的障碍物力计算。
+
+		[b]使用方式：[/b]
+		- [b]作为物理体的子节点[/b]：将 FluidObstacle2D 作为 StaticBody2D、RigidBody2D 或 CharacterBody2D 的子节点，启用 [member auto_detect_velocity] 自动提取物理体的速度。
+		- [b]独立使用[/b]：手动设置 [member velocity] 和 [member angular_velocity] 以模拟运动障碍物。
+		- [b]使用纹理[/b]：设置 [member obstacle_texture] 可以定义不规则形状的障碍物边界。
+
+		[b]工作原理：[/b]
+		障碍物纹理的 RG 通道存储障碍物速度（影响流体的移动），A 通道存储障碍物掩码（0=流体可穿透，1=固体边界）。模拟管线的 [i]obstacle_force[/i] 步骤根据此纹理在障碍物周围施加排斥力，防止流体穿透。
+
+		[b]性能注意：[/b]障碍物光栅化在 CPU 端进行，复杂的障碍物形状或大量的障碍物节点可能增加 CPU 开销。对于大量规则障碍物，考虑使用 [FluidTileMapObstacle2D]。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_auto_detect_velocity">
+			<return type="void" />
+			<param index="0" name="enable" type="bool" />
+			<description>
+				启用自动速度检测。启用时（默认），节点会尝试从父物理体（StaticBody2D/RigidBody2D/CharacterBody2D）读取线速度和角速度。
+			</description>
+		</method>
+		<method name="is_auto_detect_velocity" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否启用自动速度检测。</description>
+		</method>
+		<method name="set_velocity">
+			<return type="void" />
+			<param index="0" name="velocity" type="Vector2" />
+			<description>手动设置障碍物的线速度（世界单位/秒）。自动检测关闭时使用。</description>
+		</method>
+		<method name="get_velocity" qualifiers="const">
+			<return type="Vector2" />
+			<description>返回当前线速度。</description>
+		</method>
+		<method name="set_angular_velocity">
+			<return type="void" />
+			<param index="0" name="velocity" type="float" />
+			<description>手动设置障碍物的角速度（弧度/秒）。自动检测关闭时使用。</description>
+		</method>
+		<method name="get_angular_velocity" qualifiers="const">
+			<return type="float" />
+			<description>返回当前角速度。</description>
+		</method>
+		<method name="set_obstacle_texture">
+			<return type="void" />
+			<param index="0" name="texture" type="Texture2D" />
+			<description>设置障碍物形状纹理。非透明像素视为障碍物区域。</description>
+		</method>
+		<method name="get_obstacle_texture" qualifiers="const">
+			<return type="Texture2D" />
+			<description>返回当前障碍物纹理。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="auto_detect_velocity" type="bool" setter="set_auto_detect_velocity" getter="is_auto_detect_velocity" default="true">
+			是否自动从父物理体检测速度。关闭后使用 [member velocity] 和 [member angular_velocity]。
+		</member>
+		<member name="velocity" type="Vector2" setter="set_velocity" getter="get_velocity" default="Vector2(0, 0)">
+			手动设置的线速度。
+		</member>
+		<member name="angular_velocity" type="float" setter="set_angular_velocity" getter="get_angular_velocity" default="0.0">
+			手动设置的角速度。
+		</member>
+		<member name="obstacle_texture" type="Texture2D" setter="set_obstacle_texture" getter="get_obstacle_texture" default="null">
+			障碍物形状纹理。可选，不设置则使用节点默认矩形（32×32）。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

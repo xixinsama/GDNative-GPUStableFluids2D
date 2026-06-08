@@ -1,4 +1,5 @@
 #include "gpu_resource_manager.h"
+#include "fluid_debug_config.h"
 #include "utils/draw_request.h"
 
 #include "godot_cpp/classes/rd_shader_file.hpp"
@@ -20,7 +21,7 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	height = p_height;
 
 	if (!device) {
-		UtilityFunctions::printerr("[GPUResourceManager] ERROR: Null RenderingDevice passed to initialize()");
+		FLUID_PRINTERR("[GPUResourceManager] ERROR: Null RenderingDevice passed to initialize()");
 		return;
 	}
 
@@ -62,46 +63,32 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	// SHADER_READ_ONLY_OPTIMAL, which Forward+ can safely sample from.
 	tex_display      = create_texture(width, height, fmt, usage_display);
 
-	// Clear to initial values
-	Color black(0, 0, 0, 1);
-	device->texture_clear(tex_velocity,   black, 0, 1, 0, 1);
-	device->texture_clear(tex_pressure,   black, 0, 1, 0, 1);
-	device->texture_clear(tex_divergence, black, 0, 1, 0, 1);
-	device->texture_clear(tex_temp,       black, 0, 1, 0, 1);
-	device->texture_clear(tex_obstacle,   black, 0, 1, 0, 1);
-	device->texture_clear(tex_obstacle_pre, black, 0, 1, 0, 1);
-
-	if (p_subtractive_mixing) {
-		Color white(1, 1, 1, 1);
-		device->texture_clear(tex_color, white, 0, 1, 0, 1);
-	} else {
-		device->texture_clear(tex_color, p_clear_color, 0, 1, 0, 1);
-	}
-	// Clear display texture too
-	device->texture_clear(tex_display, p_clear_color, 0, 1, 0, 1);
+	// NOTE: texture_clear is NOT called here because RenderingDevice
+	// command submission MUST happen on the render thread. Callers must
+	// defer clear_textures() via RenderingServer::call_on_render_thread.
 
 	// --- Compute pipelines ---
-	UtilityFunctions::print("[GPUResourceManager] Loading shader pipelines...");
+	FLUID_PRINT("[GPUResourceManager] Loading shader pipelines...");
 	advect_pipeline         = create_compute_pipeline("res://shaders/advect.glsl");
-	UtilityFunctions::print("[GPUResourceManager] advect: valid=", advect_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] advect: valid=", advect_pipeline.is_valid());
 	jacobi_pipeline         = create_compute_pipeline("res://shaders/jacobi.glsl");
-	UtilityFunctions::print("[GPUResourceManager] jacobi: valid=", jacobi_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] jacobi: valid=", jacobi_pipeline.is_valid());
 	divergence_pipeline     = create_compute_pipeline("res://shaders/divergence.glsl");
-	UtilityFunctions::print("[GPUResourceManager] divergence: valid=", divergence_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] divergence: valid=", divergence_pipeline.is_valid());
 	subtract_pipeline       = create_compute_pipeline("res://shaders/subtract.glsl");
-	UtilityFunctions::print("[GPUResourceManager] subtract: valid=", subtract_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] subtract: valid=", subtract_pipeline.is_valid());
 	boundary_pipeline       = create_compute_pipeline("res://shaders/boundary.glsl");
-	UtilityFunctions::print("[GPUResourceManager] boundary: valid=", boundary_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] boundary: valid=", boundary_pipeline.is_valid());
 	vorticity_pipeline      = create_compute_pipeline("res://shaders/vorticity.glsl");
-	UtilityFunctions::print("[GPUResourceManager] vorticity: valid=", vorticity_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] vorticity: valid=", vorticity_pipeline.is_valid());
 	shift_texture_pipeline  = create_compute_pipeline("res://shaders/shift_texture.glsl");
-	UtilityFunctions::print("[GPUResourceManager] shift_texture: valid=", shift_texture_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] shift_texture: valid=", shift_texture_pipeline.is_valid());
 	splat_batch_pipeline    = create_compute_pipeline("res://shaders/splat_batch.glsl");
-	UtilityFunctions::print("[GPUResourceManager] splat_batch: valid=", splat_batch_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] splat_batch: valid=", splat_batch_pipeline.is_valid());
 	obstacle_force_pipeline = create_compute_pipeline("res://shaders/obstacle_force.glsl");
-	UtilityFunctions::print("[GPUResourceManager] obstacle_force: valid=", obstacle_force_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] obstacle_force: valid=", obstacle_force_pipeline.is_valid());
 	copy_texture_pipeline   = create_compute_pipeline("res://shaders/copy_texture.glsl");
-	UtilityFunctions::print("[GPUResourceManager] copy_texture: valid=", copy_texture_pipeline.is_valid());
+	FLUID_PRINT("[GPUResourceManager] copy_texture: valid=", copy_texture_pipeline.is_valid());
 
 	// --- Storage buffers ---
 	{

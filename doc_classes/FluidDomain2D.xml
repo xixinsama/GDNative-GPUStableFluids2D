@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidDomain2D" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		流体域配置资源，可保存和共享流体模拟的完整参数配置。
+	</brief_description>
+	<description>
+		FluidDomain2D 是一个 [RefCounted] 资源，封装了流体模拟的全部域参数。它可以保存为 .tres 资源文件，在多个 [GPUStableFluids2D] 节点之间共享配置，或用于预设管理。
+
+		[b]与 GPUStableFluids2D 的关系：[/b]
+		FluidDomain2D 保存参数，[GPUStableFluids2D] 执行模拟。使用 [method apply_to] 方法可以将 FluidDomain2D 中的所有参数一键应用到指定的模拟节点。
+
+		[b]使用示例：[/b]
+		[codeblock]
+		# 创建并保存配置
+		var domain = FluidDomain2D.new()
+		domain.resolution = Vector2(256, 256)
+		domain.viscosity = 0.001
+		domain.vorticity_enabled = false
+		ResourceSaver.save(domain, "res://water_domain.tres")
+
+		# 加载并应用配置
+		var domain = load("res://water_domain.tres")
+		domain.apply_to($GPUStableFluids2D)
+		[/codeblock]
+
+		[b]参数列表：[/b]
+		包含分辨率、时间步长、网格缩放、粘度、扩散、Jacobi 迭代次数（压力/速度）、涡量约束开关及强度、颜色/速度衰减率、背景清除颜色等全部模拟参数。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_resolution"><return type="void" /><param index="0" name="resolution" type="Vector2" /><description>设置模拟分辨率。</description></method>
+		<method name="get_resolution" qualifiers="const"><return type="Vector2" /><description>返回分辨率。</description></method>
+		<method name="set_timestep"><return type="void" /><param index="0" name="timestep" type="float" /><description>设置时间步长。</description></method>
+		<method name="get_timestep" qualifiers="const"><return type="float" /><description>返回时间步长。</description></method>
+		<method name="set_grid_scale"><return type="void" /><param index="0" name="scale" type="float" /><description>设置网格缩放。</description></method>
+		<method name="get_grid_scale" qualifiers="const"><return type="float" /><description>返回网格缩放。</description></method>
+		<method name="set_viscosity"><return type="void" /><param index="0" name="viscosity" type="float" /><description>设置粘度。</description></method>
+		<method name="get_viscosity" qualifiers="const"><return type="float" /><description>返回粘度。</description></method>
+		<method name="set_diffusion"><return type="void" /><param index="0" name="diffusion" type="float" /><description>设置扩散系数。</description></method>
+		<method name="get_diffusion" qualifiers="const"><return type="float" /><description>返回扩散系数。</description></method>
+		<method name="set_jacobi_pressure_iterations"><return type="void" /><param index="0" name="iterations" type="int" /><description>设置压力求解器迭代次数。</description></method>
+		<method name="get_jacobi_pressure_iterations" qualifiers="const"><return type="int" /><description>返回压力求解器迭代次数。</description></method>
+		<method name="set_jacobi_velocity_iterations"><return type="void" /><param index="0" name="iterations" type="int" /><description>设置速度扩散求解器迭代次数。</description></method>
+		<method name="get_jacobi_velocity_iterations" qualifiers="const"><return type="int" /><description>返回速度扩散求解器迭代次数。</description></method>
+		<method name="set_vorticity_enabled"><return type="void" /><param index="0" name="enabled" type="bool" /><description>设置涡量约束开关。</description></method>
+		<method name="is_vorticity_enabled" qualifiers="const"><return type="bool" /><description>返回涡量约束是否启用。</description></method>
+		<method name="set_vorticity_scale"><return type="void" /><param index="0" name="scale" type="float" /><description>设置涡量约束强度。</description></method>
+		<method name="get_vorticity_scale" qualifiers="const"><return type="float" /><description>返回涡量约束强度。</description></method>
+		<method name="set_color_decay"><return type="void" /><param index="0" name="decay" type="float" /><description>设置颜色衰减率。</description></method>
+		<method name="get_color_decay" qualifiers="const"><return type="float" /><description>返回颜色衰减率。</description></method>
+		<method name="set_velocity_decay"><return type="void" /><param index="0" name="decay" type="float" /><description>设置速度衰减率。</description></method>
+		<method name="get_velocity_decay" qualifiers="const"><return type="float" /><description>返回速度衰减率。</description></method>
+		<method name="set_clear_color"><return type="void" /><param index="0" name="color" type="Color" /><description>设置背景清除颜色。</description></method>
+		<method name="get_clear_color" qualifiers="const"><return type="Color" /><description>返回清除颜色。</description></method>
+		<method name="apply_to">
+			<return type="void" />
+			<param index="0" name="sim" type="GPUStableFluids2D" />
+			<description>将当前所有域参数应用到指定的 [GPUStableFluids2D] 模拟节点。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="resolution" type="Vector2" setter="set_resolution" getter="get_resolution" default="Vector2(512, 512)">模拟分辨率。</member>
+		<member name="timestep" type="float" setter="set_timestep" getter="get_timestep" default="1.0">时间步长。</member>
+		<member name="grid_scale" type="float" setter="set_grid_scale" getter="get_grid_scale" default="1.0">网格缩放因子。</member>
+		<member name="viscosity" type="float" setter="set_viscosity" getter="get_viscosity" default="0.0">粘度。</member>
+		<member name="diffusion" type="float" setter="set_diffusion" getter="get_diffusion" default="0.0">扩散系数。</member>
+		<member name="jacobi_pressure_iterations" type="int" setter="set_jacobi_pressure_iterations" getter="get_jacobi_pressure_iterations" default="40">压力求解器迭代次数。</member>
+		<member name="jacobi_velocity_iterations" type="int" setter="set_jacobi_velocity_iterations" getter="get_jacobi_velocity_iterations" default="10">速度扩散求解器迭代次数。</member>
+		<member name="vorticity_enabled" type="bool" setter="set_vorticity_enabled" getter="is_vorticity_enabled" default="true">是否启用涡量约束。</member>
+		<member name="vorticity_scale" type="float" setter="set_vorticity_scale" getter="get_vorticity_scale" default="0.4">涡量约束强度。</member>
+		<member name="color_decay" type="float" setter="set_color_decay" getter="get_color_decay" default="0.0005">颜色衰减率。</member>
+		<member name="velocity_decay" type="float" setter="set_velocity_decay" getter="get_velocity_decay" default="-1.0">速度衰减率。</member>
+		<member name="clear_color" type="Color" setter="set_clear_color" getter="get_clear_color" default="Color(0, 0, 0, 0)">清除颜色。</member>
+	</members>
+	<constants>
+	</constants>
+</class>

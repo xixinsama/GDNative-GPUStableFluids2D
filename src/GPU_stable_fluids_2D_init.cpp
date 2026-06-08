@@ -1,5 +1,6 @@
 #include "GPU_stable_fluids_2D_init.h"
 
+#include "core/fluid_debug_config.h"
 #include "godot_cpp/classes/camera2d.hpp"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/rendering_server.hpp"
@@ -194,16 +195,12 @@ void GPUStableFluids2D::_process(double p_delta) {
 	if (Engine::get_singleton()->is_editor_hint()) return;
 	if (!_initialized) return;
 
-	if (_frame_count == 0) {
-		UtilityFunctions::print("[GPUStableFluids2D] _process() first frame START");
-	}
-
 	if (_needs_recreate) {
 		_recreate_gpu_resources();
 		_needs_recreate = false;
 	}
 
-	// Domain following
+	// ── Domain following (main-thread-safe: reads node/camera transforms) ──
 	Vector2 domain_offset(0, 0);
 
 	if (follow_mode == FollowMode::Camera2D) {
@@ -222,11 +219,26 @@ void GPUStableFluids2D::_process(double p_delta) {
 		_previous_follow_pos = current;
 	}
 
-	// ---- GPU Simulation ----
+	// ── GPU work: ALL RenderingDevice command submission MUST run on the ──
+	// ── render thread. compute_list_begin, texture_copy, buffer_update,  ──
+	// ── etc. from the main thread cause Vulkan command-buffer corruption  ──
+	// ── and instant crashes (see Godot 4 RenderingDevice documentation).  ──
+	RenderingServer::get_singleton()->call_on_render_thread(
+		callable_mp(this, &GPUStableFluids2D::_gpu_process_on_render_thread).bind(p_delta, domain_offset)
+	);
+}
+
+// ── Render-thread callback: all RenderingDevice commands run here ──
+
+void GPUStableFluids2D::_gpu_process_on_render_thread(double p_delta, Vector2 domain_offset) {
 	RenderingDevice *rd = _gpu_resources.device;
 	if (!rd) return;
 
-	// Domain shift
+	if (_frame_count == 0) {
+		FLUID_PRINT("[GPUStableFluids2D] _gpu_process_on_render_thread() first frame START");
+	}
+
+	// --- Domain shift (wrapping / camera following) ---
 	if (domain_offset.length_squared() > 0.000001f) {
 		ShiftTexturePushConstant shift;
 		shift.resolution[0] = (float)width;
@@ -285,7 +297,7 @@ void GPUStableFluids2D::_process(double p_delta) {
 		std::swap(_gpu_resources.tex_velocity, _gpu_resources.tex_temp);
 	}
 
-	// Run the full simulation pipeline
+	// --- Run the full simulation pipeline ---
 	// Upload draw requests to GPU before pipeline
 	_upload_batch_data();
 
@@ -294,19 +306,20 @@ void GPUStableFluids2D::_process(double p_delta) {
 
 	_render_pipeline.execute((float)p_delta, this);
 
-	// Copy compute output (tex_color, has STORAGE_BIT → GENERAL layout)
-	// to the display texture (tex_display, no STORAGE_BIT → SHADER_READ_ONLY_OPTIMAL).
-	// Forward+ can only safely sample textures in SHADER_READ_ONLY_OPTIMAL layout.
-	// texture_copy() handles the Vulkan layout transitions for both source and dest.
+	// --- Copy compute output to display texture ---
+	// tex_color has STORAGE_BIT → GENERAL layout after compute.
+	// tex_display has no STORAGE_BIT → SHADER_READ_ONLY_OPTIMAL layout.
+	// texture_copy() handles Vulkan layout transitions for both source and dest.
 	rd->texture_copy(
-		_gpu_resources.tex_color,   // source (GENERAL → TRANSFER_SRC → GENERAL)
-		_gpu_resources.tex_display, // dest   (READ_ONLY → TRANSFER_DST → READ_ONLY)
+		_gpu_resources.tex_color,   // source
+		_gpu_resources.tex_display, // dest
 		Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
 		0, 0, 0, 0);
 
+	// Computation complete — clear this frame's draw requests
 	_draw_request_count = 0;
 	if (_frame_count == 0) {
-		UtilityFunctions::print("[GPUStableFluids2D] _process() first frame DONE");
+		FLUID_PRINT("[GPUStableFluids2D] _gpu_process_on_render_thread() first frame DONE");
 	}
 	_frame_count++;
 }
@@ -361,14 +374,20 @@ void GPUStableFluids2D::_upload_batch_data() {
 	rd->buffer_update(_gpu_resources.batch_buffer, 0, pba.size(), pba);
 }
 
+// Wrapper so callable_mp works — GPUResourceManager is not a Godot Object,
+// so we can't create a method pointer callable directly on it.
+void GPUStableFluids2D::_deferred_clear_textures(const Color &p_color) {
+	_gpu_resources.clear_textures(p_color);
+}
+
 void GPUStableFluids2D::_initialise_gpu() {
 	RenderingDevice *rd = RenderingServer::get_singleton()->get_rendering_device();
 	if (!rd) {
-		UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: No RenderingDevice available! GPU init skipped. "
+		FLUID_PRINTERR("[GPUStableFluids2D] ERROR: No RenderingDevice available! GPU init skipped. "
 			"This is expected in Compatibility renderer. Switch to Forward+ or Mobile for GPU compute support.");
 		return;
 	}
-	UtilityFunctions::print("[GPUStableFluids2D] RenderingDevice obtained: ", rd->get_device_name());
+	FLUID_PRINT("[GPUStableFluids2D] RenderingDevice obtained: ", rd->get_device_name());
 
 	_gpu_resources.initialize(
 		rd,
@@ -378,7 +397,7 @@ void GPUStableFluids2D::_initialise_gpu() {
 	bool all_ok = true;
 	auto check_pipeline = [&](const ComputePipeline &p, const char *name) {
 		if (!p.is_valid()) {
-			UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: Pipeline '", name, "' failed to load!");
+			FLUID_PRINTERR("[GPUStableFluids2D] ERROR: Pipeline '", name, "' failed to load!");
 			all_ok = false;
 		}
 	};
@@ -394,7 +413,7 @@ void GPUStableFluids2D::_initialise_gpu() {
 	check_pipeline(_gpu_resources.copy_texture_pipeline, "copy_texture");
 
 	if (!all_ok) {
-		UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: Some GPU pipelines failed to load. Simulation will be disabled.");
+		FLUID_PRINTERR("[GPUStableFluids2D] ERROR: Some GPU pipelines failed to load. Simulation will be disabled.");
 		_gpu_resources.terminate();
 		return;
 	}
@@ -409,8 +428,15 @@ void GPUStableFluids2D::_initialise_gpu() {
 
 	_obstacle_drawer.initialize(this);
 
+	// Defer initial texture clear to the render thread.
+	// texture_clear must NOT be called from the main thread — it submits GPU
+	// commands and would corrupt the Vulkan command buffer.
+	RenderingServer::get_singleton()->call_on_render_thread(
+		callable_mp(this, &GPUStableFluids2D::_deferred_clear_textures).bind(clear_color)
+	);
+
 	_initialized = true;
-	UtilityFunctions::print("[GPUStableFluids2D] GPU initialization complete. All pipelines ready.");
+	FLUID_PRINT("[GPUStableFluids2D] GPU initialization complete. All pipelines ready.");
 	emit_signal("simulation_initialized");
 }
 

@@ -116,6 +116,8 @@ private:
 	void _initialise_gpu();
 	void _recreate_gpu_resources();
 	void _upload_batch_data();
+	void _gpu_process_on_render_thread(double p_delta, Vector2 p_domain_offset);
+	void _deferred_clear_textures(const Color &p_color);
 
 	// ---- Simulation parameters ----
 	int   width           = 512;

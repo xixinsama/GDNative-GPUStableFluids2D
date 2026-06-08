@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="GPUStableFluids2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		基于 GPU 的实时二维不可压缩流体模拟节点，使用 Navier-Stokes 方程和 Stable Fluids 方法。
+	</brief_description>
+	<description>
+		GPUStableFluids2D 提供了一个完整的 GPU 加速二维流体模拟系统。它在 GPU 上通过计算着色器（Compute Shader）求解二维不可压缩 Navier-Stokes 方程，实现了经典 Stam Stable Fluids 算法，并增加了涡量约束（Vorticity Confinement）、障碍物交互、域跟随等高级功能。
+
+		模拟管线由 11 个步骤组成：[b]Splat 输入 → 障碍物力 → 速度平流 → 速度扩散 → 涡量约束 → 散度计算 → 压力求解 → 梯度减法 → 边界条件 → 颜色平流 → 障碍物复制[/b]。所有计算均在 GPU 端执行，CPU 仅负责参数更新和数据上传，性能极高。
+
+		模拟状态存储在多个 RGBA32F 浮点纹理中：速度场（tex_velocity）、压力场（tex_pressure）、颜色/密度场（tex_color）、散度场（tex_divergence）等。你可以通过 [method get_output_texture] 获取颜色场的 [Texture2DRD] 渲染到屏幕上，或通过 [method queue_draw_request] 向流体注入颜色和速度。
+
+		[b]核心概念：[/b]
+		- [b]流体域（Fluid Domain）[/b]：模拟空间，由 [member fluid_world_size] 定义世界坐标系下的尺寸。世界坐标通过 UV 映射转换到纹理空间。
+		- [b]绘制请求（Draw Request）[/b]：每帧累积的"注入操作"，在管线第一步批量 splat 到速度场和颜色场。最大 4096 个/帧。
+		- [b]域跟随（Domain Following）[/b]：支持跟随 Camera2D 或任意 Node2D 移动，自动偏移流体域纹理实现无限流体空间。
+
+		[b]⚠️ 重要提示：[/b]
+		- 必须在 [b]Forward+[/b] 或 [b]Mobile[/b] 渲染器下运行，[b]Compatibility[/b] 渲染器不支持 RenderingDevice。
+		- 所有 GPU 操作已自动委托到渲染线程，无需手动处理线程安全。
+		- 修改分辨率（[member width]/[member height]）会触发 GPU 资源重建并重置模拟状态。
+		- 涡量约束默认开启，建议保持 [member vorticity_scale] 在 0.1~0.5 之间。
+		- [member poisson_iterations] 是性能与质量的主要权衡参数，推荐 20~60。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_resolution">
+			<return type="void" />
+			<param index="0" name="width" type="int" />
+			<param index="1" name="height" type="int" />
+			<description>
+				设置模拟网格分辨率。修改分辨率将重建所有 GPU 纹理和管线，并重置模拟状态。最低分辨率为 32，推荐默认值 512×512。分辨率越高效果越精细，但 GPU 开销也随之增大。
+			</description>
+		</method>
+		<method name="set_width">
+			<return type="void" />
+			<param index="0" name="width" type="int" />
+			<description>
+				单独设置模拟网格宽度。与 [method set_resolution] 行为相同。
+			</description>
+		</method>
+		<method name="set_height">
+			<return type="void" />
+			<param index="0" name="height" type="int" />
+			<description>
+				单独设置模拟网格高度。与 [method set_resolution] 行为相同。
+			</description>
+		</method>
+		<method name="get_width" qualifiers="const">
+			<return type="int" />
+			<description>
+				返回当前模拟网格的宽度（像素数）。
+			</description>
+		</method>
+		<method name="get_height" qualifiers="const">
+			<return type="int" />
+			<description>
+				返回当前模拟网格的高度（像素数）。
+			</description>
+		</method>
+		<method name="set_timestep">
+			<return type="void" />
+			<param index="0" name="timestep" type="float" />
+			<description>
+				设置模拟时间步长。更大的值使流体运动更快，但可能导致数值不稳定。典型范围：0.5~2.0。默认值 1.0 适合大多数场景。
+			</description>
+		</method>
+		<method name="get_timestep" qualifiers="const">
+			<return type="float" />
+			<description>返回当前时间步长。</description>
+		</method>
+		<method name="set_grid_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				设置每个网格单元的物理尺度。影响力和速度在世界坐标系中的解释方式。默认值为 1.0。如果使用自定义世界尺寸可能需要调整。
+			</description>
+		</method>
+		<method name="get_grid_scale" qualifiers="const">
+			<return type="float" />
+			<description>返回当前网格缩放因子。</description>
+		</method>
+		<method name="set_viscosity">
+			<return type="void" />
+			<param index="0" name="viscosity" type="float" />
+			<description>
+				设置流体粘度。0 = 无粘性（无扩散计算），值越高流体越"浓稠"，流动阻力越大。粘度通过 Jacobi 扩散求解器实现；非零粘度的开销较大。典型范围：0.0~0.01。
+			</description>
+		</method>
+		<method name="get_viscosity" qualifiers="const">
+			<return type="float" />
+			<description>返回当前粘度值。</description>
+		</method>
+		<method name="set_diffusion">
+			<return type="void" />
+			<param index="0" name="diffusion" type="float" />
+			<description>
+				设置扩散系数。影响颜色/密度场的扩散速度。默认值为 0.0（无扩散）。目前此参数预留，实际颜色扩散由 [member color_decay] 和 [member velocity_decay] 控制。
+			</description>
+		</method>
+		<method name="get_diffusion" qualifiers="const">
+			<return type="float" />
+			<description>返回当前扩散系数。</description>
+		</method>
+		<method name="set_poisson_iterations">
+			<return type="void" />
+			<param index="0" name="iterations" type="int" />
+			<description>
+				设置 Jacobi 压力求解器的迭代次数。这是[b]性能与精度的主要权衡参数[/b]。迭代次数越多，散度消除越彻底，流体压缩性越小，但 GPU 开销线性增长。典型范围：20~60。对于需要精确不可压缩性的场景，可设置到 80~120。
+			</description>
+		</method>
+		<method name="get_poisson_iterations" qualifiers="const">
+			<return type="int" />
+			<description>返回当前压力求解器迭代次数。</description>
+		</method>
+		<method name="set_ink_longevity">
+			<return type="void" />
+			<param index="0" name="longevity" type="float" />
+			<description>
+				设置颜色/密度场的持久性。1.0 表示永不衰减，值越低颜色消失越快。该值作为每帧衰减乘数应用。典型范围：0.9~1.0。模拟图片为流体时建议使用 0.9999 以保持画面。
+			</description>
+		</method>
+		<method name="get_ink_longevity" qualifiers="const">
+			<return type="float" />
+			<description>返回当前持久性因子。</description>
+		</method>
+		<method name="set_ink_color">
+			<return type="void" />
+			<param index="0" name="color" type="Color" />
+			<description>
+				设置 [method add_impulse] 注入的颜色。[member subtractive_mixing] 为 false 时，此颜色与已有密度场叠加；为 true 时使用 CMY 减色混合（类似颜料混合效果）。
+			</description>
+		</method>
+		<method name="get_ink_color" qualifiers="const">
+			<return type="Color" />
+			<description>返回当前注入颜色。</description>
+		</method>
+		<method name="set_clear_color">
+			<return type="void" />
+			<param index="0" name="color" type="Color" />
+			<description>
+				设置模拟重置时的背景颜色。在减色混合模式下通常设为白色（Color.WHITE），其他模式通常设为透明（Color(0,0,0,0)）。
+			</description>
+		</method>
+		<method name="get_clear_color" qualifiers="const">
+			<return type="Color" />
+			<description>返回当前清除颜色。</description>
+		</method>
+		<method name="set_color_decay">
+			<return type="void" />
+			<param index="0" name="decay" type="float" />
+			<description>
+				设置每帧颜色衰减率。0 为不衰减，1 为瞬间消失。典型值：0.0001~0.001。此参数独立于 [member ink_longevity]，在平流步骤后应用。
+			</description>
+		</method>
+		<method name="get_color_decay" qualifiers="const">
+			<return type="float" />
+			<description>返回当前颜色衰减率。</description>
+		</method>
+		<method name="set_velocity_decay">
+			<return type="void" />
+			<param index="0" name="decay" type="float" />
+			<description>
+				设置每帧速度衰减率。负值（如 -1.0）表示不衰减，正值表示阻尼。典型值：-1.0（保持速度）或 0.001（轻微阻尼）。速度衰减在平流步骤后应用。
+			</description>
+		</method>
+		<method name="get_velocity_decay" qualifiers="const">
+			<return type="float" />
+			<description>返回当前速度衰减率。</description>
+		</method>
+		<method name="set_vorticity_enabled">
+			<return type="void" />
+			<param index="0" name="enabled" type="bool" />
+			<description>
+				启用或禁用涡量约束（Vorticity Confinement）。启用后，小尺度涡旋运动被增强，抵消数值耗散带来的细节损失，使流体呈现更丰富的湍流效果。建议保持开启。
+			</description>
+		</method>
+		<method name="is_vorticity_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>返回涡量约束是否启用。</description>
+		</method>
+		<method name="set_vorticity_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				设置涡量约束力的强度。值越高，涡旋效果越明显。典型范围：0.1~0.5。过大的值会导致流体"爆炸"或不稳定。
+			</description>
+		</method>
+		<method name="get_vorticity_scale" qualifiers="const">
+			<return type="float" />
+			<description>返回当前涡量约束强度。</description>
+		</method>
+		<method name="set_density_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				设置密度场缩放因子。影响颜色场的整体强度。典型值：0.1~10.0，默认 1.0。
+			</description>
+		</method>
+		<method name="get_density_scale" qualifiers="const">
+			<return type="float" />
+			<description>返回当前密度缩放因子。</description>
+		</method>
+		<method name="set_obstacle_force_strength">
+			<return type="void" />
+			<param index="0" name="strength" type="float" />
+			<description>
+				设置障碍物排斥力的强度。值越高，流体越难穿透障碍物边界。典型范围：1.0~20.0，默认 5.0。
+			</description>
+		</method>
+		<method name="get_obstacle_force_strength" qualifiers="const">
+			<return type="float" />
+			<description>返回当前障碍物力强度。</description>
+		</method>
+		<method name="set_subtractive_mixing">
+			<return type="void" />
+			<param index="0" name="enabled" type="bool" />
+			<description>
+				启用或禁用减色混合模式。启用时使用 CMY 颜色模型（类似颜料混合），禁用时使用加法混合（类似光线叠加）。在流体初始化时设置，运行中修改不会立即生效。
+			</description>
+		</method>
+		<method name="is_subtractive_mixing" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否启用减色混合。</description>
+		</method>
+		<method name="set_follow_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>
+				设置域跟随模式。可选值：
+				- [code]0[/code]（Camera2D）：跟随场景中第一个 Camera2D
+				- [code]1[/code]（Node2D）：跟随 [member follow_path] 指定的节点
+				- [code]2[/code]（None）：流体域固定在原点不动
+			</description>
+		</method>
+		<method name="get_follow_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前域跟随模式。</description>
+		</method>
+		<method name="set_follow_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>
+				设置 Node2D 跟随模式下要跟踪的节点路径。仅在 [member follow_mode] 为 1（Node2D）时生效。
+			</description>
+		</method>
+		<method name="get_follow_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前跟随节点路径。</description>
+		</method>
+		<method name="set_fluid_world_size">
+			<return type="void" />
+			<param index="0" name="size" type="Vector2" />
+			<description>
+				设置流体域的世界空间尺寸。定义世界坐标系中模拟覆盖的范围。世界坐标（X, Y）被映射到纹理 UV [0,1]：[code]u = (X - domain_center.x) / fluid_world_size.x + 0.5[/code]。默认值 (1920, 1080)。
+			</description>
+		</method>
+		<method name="get_fluid_world_size" qualifiers="const">
+			<return type="Vector2" />
+			<description>返回当前流体域世界尺寸。</description>
+		</method>
+		<method name="set_domain_wrap_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>
+				设置域包裹模式：
+				- [code]0[/code]（Toroidal）：纹理边界循环包裹（模拟无限空间）
+				- [code]1[/code]（Clamp）：硬边界截断
+			</description>
+		</method>
+		<method name="get_domain_wrap_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前域包裹模式。</description>
+		</method>
+		<method name="add_impulse">
+			<return type="void" />
+			<param index="0" name="position" type="Vector2" />
+			<param index="1" name="strength" type="Vector2" />
+			<param index="2" name="radius" type="float" />
+			<param index="3" name="add_ink" type="bool" default="true" />
+			<description>
+				向流体注入一个高斯形状的脉冲。在 [param position]（世界坐标）处施加 [param strength] 力矢量，并使用 [param radius] 控制空间范围。如果 [param add_ink] 为 true，同时注入当前 [member ink_color]。
+				这是与流体交互的主要方法，通常由 [FluidMouseInteractor2D] 或自定义控制器调用。
+			</description>
+		</method>
+		<method name="queue_draw_request">
+			<return type="void" />
+			<param index="0" name="pos" type="Vector2" />
+			<param index="1" name="color" type="Color" />
+			<param index="2" name="vel" type="Vector2" />
+			<param index="3" name="color_radius" type="float" />
+			<param index="4" name="velocity_radius" type="float" />
+			<description>
+				向绘制请求环形缓冲区添加一个条目。每个请求在模拟管线的第一步（Splat Batch）被处理，分别将颜色和速度以高斯 splat 写入对应纹理。
+				[param pos] 为世界坐标位置，[param color] 为注入颜色（含 alpha），[param vel] 为速度矢量，[param color_radius] 和 [param velocity_radius] 分别控制颜色和速度 splat 的空间范围。
+				每帧最多 4096 个请求；超出的请求会被静默丢弃。
+			</description>
+		</method>
+		<method name="clear_draw_requests">
+			<return type="void" />
+			<description>
+				清空当前帧的所有绘制请求。通常在帧开始时或有特殊需求时调用。
+			</description>
+		</method>
+		<method name="reset">
+			<return type="void" />
+			<description>
+				重置模拟到初始状态：清空所有速度、压力、散度和颜色场（填充 [member clear_color]），并清空绘制请求。同时发射 [signal simulation_reset] 信号。
+			</description>
+		</method>
+		<method name="get_output_texture" qualifiers="const">
+			<return type="Texture2DRD" />
+			<description>
+				返回包含当前颜色/密度场的 [Texture2DRD]。此纹理可直接赋值给 [Sprite2D] 的 texture 属性或用于自定义着色器材质。[FluidDisplay2D] 节点封装了此操作。
+			</description>
+		</method>
+		<method name="world_to_fluid_pos" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="world_pos" type="Vector2" />
+			<description>
+				将世界坐标转换为流体网格坐标（像素空间）。考虑域跟随偏移。
+			</description>
+		</method>
+		<method name="sample_velocity" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="world_pos" type="Vector2" />
+			<description>
+				采样指定世界位置的流体速度。当前版本返回占位值（零向量），完整实现将在后续版本中添加 GPU 回读支持。
+			</description>
+		</method>
+		<method name="get_domain_offset" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				返回当前域跟随偏移量。可用于调试或自定义渲染。
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="width" type="int" setter="set_width" getter="get_width" default="512">
+			模拟网格宽度（像素）。修改此值会触发 GPU 资源重建。最小值为 32。
+		</member>
+		<member name="height" type="int" setter="set_height" getter="get_height" default="512">
+			模拟网格高度（像素）。修改此值会触发 GPU 资源重建。最小值为 32。
+		</member>
+		<member name="timestep" type="float" setter="set_timestep" getter="get_timestep" default="1.0">
+			模拟时间步长。值越大流体运动越快，但可能不稳定。范围：0.1~10.0。
+		</member>
+		<member name="grid_scale" type="float" setter="set_grid_scale" getter="get_grid_scale" default="1.0">
+			网格单元物理尺度。范围：0.1~100.0。
+		</member>
+		<member name="viscosity" type="float" setter="set_viscosity" getter="get_viscosity" default="0.0">
+			流体粘度。0 无粘性。范围：0.0~0.01。
+		</member>
+		<member name="diffusion" type="float" setter="set_diffusion" getter="get_diffusion" default="0.0">
+			扩散系数。范围：0.0~0.01。
+		</member>
+		<member name="poisson_iterations" type="int" setter="set_poisson_iterations" getter="get_poisson_iterations" default="40">
+			Jacobi 压力求解迭代次数。性能-精度主要权衡。范围：1~200。
+		</member>
+		<member name="ink_longevity" type="float" setter="set_ink_longevity" getter="get_ink_longevity" default="0.995">
+			颜色持久性。1.0 = 永存。范围：0.9~1.0。
+		</member>
+		<member name="ink_color" type="Color" setter="set_ink_color" getter="get_ink_color" default="Color(1, 1, 1, 1)">
+			[method add_impulse] 注入的颜色。
+		</member>
+		<member name="clear_color" type="Color" setter="set_clear_color" getter="get_clear_color" default="Color(0, 0, 0, 0)">
+			重置时的背景颜色。
+		</member>
+		<member name="color_decay" type="float" setter="set_color_decay" getter="get_color_decay" default="0.0005">
+			每帧颜色衰减率。范围：0.0~1.0。
+		</member>
+		<member name="velocity_decay" type="float" setter="set_velocity_decay" getter="get_velocity_decay" default="-1.0">
+			每帧速度衰减率。-1 不衰减。范围：-1.0~1.0。
+		</member>
+		<member name="vorticity_enabled" type="bool" setter="set_vorticity_enabled" getter="is_vorticity_enabled" default="true">
+			是否启用涡量约束。
+		</member>
+		<member name="vorticity_scale" type="float" setter="set_vorticity_scale" getter="get_vorticity_scale" default="0.4">
+			涡量约束强度。范围：0.0~5.0。
+		</member>
+		<member name="density_scale" type="float" setter="set_density_scale" getter="get_density_scale" default="1.0">
+			密度缩放因子。范围：0.1~10.0。
+		</member>
+		<member name="obstacle_force_strength" type="float" setter="set_obstacle_force_strength" getter="get_obstacle_force_strength" default="5.0">
+			障碍物排斥力强度。范围：0.0~100.0。
+		</member>
+		<member name="subtractive_mixing" type="bool" setter="set_subtractive_mixing" getter="is_subtractive_mixing" default="false">
+			是否启用减色混合（CMY 颜料模式）。
+		</member>
+		<member name="follow_mode" type="int" setter="set_follow_mode" getter="get_follow_mode" default="0">
+			域跟随模式：[code]0[/code]=Camera2D, [code]1[/code]=Node2D, [code]2[/code]=None。
+		</member>
+		<member name="follow_path" type="NodePath" setter="set_follow_path" getter="get_follow_path" default="NodePath()">
+			Node2D 跟随模式下的目标节点路径。
+		</member>
+		<member name="fluid_world_size" type="Vector2" setter="set_fluid_world_size" getter="get_fluid_world_size" default="Vector2(1920, 1080)">
+			流体域的世界空间尺寸。
+		</member>
+		<member name="domain_wrap_mode" type="int" setter="set_domain_wrap_mode" getter="get_domain_wrap_mode" default="0">
+			域包裹模式：[code]0[/code]=Toroidal（循环）, [code]1[/code]=Clamp（截断）。
+		</member>
+	</members>
+	<signals>
+		<signal name="simulation_initialized">
+			<description>
+				GPU 资源和管线初始化完成时发出。可用于在模拟就绪后自动开始注入流体。
+			</description>
+		</signal>
+		<signal name="simulation_reset">
+			<description>
+				调用 [method reset] 时发出。通知所有依赖节点模拟状态已被清空。
+			</description>
+		</signal>
+		<signal name="obstacle_changed">
+			<description>
+				障碍物配置发生变化时发出。障碍物绘制器会强制重绘下一帧的障碍物纹理。
+			</description>
+		</signal>
+	</signals>
+	<constants>
+	</constants>
+</class>

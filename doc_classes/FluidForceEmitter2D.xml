@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidForceEmitter2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		GPU 端力场发射器，向流体施加方向力、径向力、漩涡等结构化力场，内置 6 种预设。
+	</brief_description>
+	<description>
+		FluidForceEmitter2D 与 [FluidEmitter2D] 不同——它不注入颜色/密度，而是向流体速度场施加结构化力。力场计算在 GPU 端执行，零 CPU 开销。
+
+		[b]力场模式（Force Pattern）：[/b]
+		- [b]Directional[/b]（定向）：沿 [member force] 方向施加均匀力
+		- [b]PointRadial[/b]（点径向）：从发射器位置向外辐射力
+		- [b]Swirl[/b]（漩涡）：以发射器为中心产生旋转力场
+		- [b]Centripetal[/b]（向心）：将流体拉向发射器中心
+		- [b]Centrifugal[/b]（离心）：将流体推离发射器中心
+
+		[b]预设效果：[/b]
+		- [b]Wind[/b]（风）：定向风力，模拟自然风
+		- [b]Gravity[/b]（重力）：向下的均匀重力
+		- [b]Vortex[/b]（漩涡）：强烈旋转的涡流
+		- [b]Explosion[/b]（爆炸）：向外爆发的径向力
+		- [b]Magnet[/b]（磁铁）：向发射器吸引流体的力
+
+		[b]力衰减：[/b]力场强度随距离衰减，衰减指数由 [member falloff_exponent] 控制。值越大，力越集中在发射器附近。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_active"><return type="void" /><param index="0" name="active" type="bool" /><description>启用或暂停力场发射器。</description></method>
+		<method name="is_active" qualifiers="const"><return type="bool" /><description>返回发射器是否活动。</description></method>
+		<method name="set_force_pattern"><return type="void" /><param index="0" name="pattern" type="int" /><description>设置力场模式：0=Directional, 1=PointRadial, 2=Swirl, 3=Centripetal, 4=Centrifugal。</description></method>
+		<method name="get_force_pattern" qualifiers="const"><return type="int" /><description>返回当前力场模式。</description></method>
+		<method name="set_force"><return type="void" /><param index="0" name="force" type="Vector2" /><description>设置力矢量的大小和方向。用于 Directional 模式。</description></method>
+		<method name="get_force" qualifiers="const"><return type="Vector2" /><description>返回当前力矢量。</description></method>
+		<method name="set_force_radius"><return type="void" /><param index="0" name="radius" type="float" /><description>设置力场的作用半径（像素）。</description></method>
+		<method name="get_force_radius" qualifiers="const"><return type="float" /><description>返回当前力场半径。</description></method>
+		<method name="set_emission_shape"><return type="void" /><param index="0" name="shape" type="int" /><description>设置力场形状：0=Point, 1=Circle, 2=Rect, 3=LineSegment, 4=TextureMask。</description></method>
+		<method name="get_emission_shape" qualifiers="const"><return type="int" /><description>返回当前形状。</description></method>
+		<method name="set_shape_size"><return type="void" /><param index="0" name="size" type="Vector2" /><description>设置力场形状的尺寸。</description></method>
+		<method name="get_shape_size" qualifiers="const"><return type="Vector2" /><description>返回当前形状尺寸。</description></method>
+		<method name="set_falloff_exponent"><return type="void" /><param index="0" name="exponent" type="float" /><description>设置力场距离衰减指数。默认 2.0（平方反比衰减）。</description></method>
+		<method name="get_falloff_exponent" qualifiers="const"><return type="float" /><description>返回当前衰减指数。</description></method>
+		<method name="set_swirl_strength"><return type="void" /><param index="0" name="strength" type="float" /><description>设置漩涡模式的旋转强度。</description></method>
+		<method name="get_swirl_strength" qualifiers="const"><return type="float" /><description>返回当前漩涡强度。</description></method>
+		<method name="set_force_preset"><return type="void" /><param index="0" name="preset" type="int" /><description>加载力场预设：0=Custom, 1=Wind, 2=Gravity, 3=Vortex, 4=Explosion, 5=Magnet。</description></method>
+		<method name="get_force_preset" qualifiers="const"><return type="int" /><description>返回当前预设。</description></method>
+		<method name="set_lifetime"><return type="void" /><param index="0" name="lifetime" type="float" /><description>设置生命周期（秒）。0=无限。</description></method>
+		<method name="get_lifetime" qualifiers="const"><return type="float" /><description>返回当前生命周期。</description></method>
+		<method name="set_auto_destroy"><return type="void" /><param index="0" name="enable" type="bool" /><description>设置生命周期结束后是否自动 queue_free。</description></method>
+		<method name="is_auto_destroy" qualifiers="const"><return type="bool" /><description>返回是否自动销毁。</description></method>
+		<method name="set_sim_target_path"><return type="void" /><param index="0" name="path" type="NodePath" /><description>设置目标模拟节点路径。</description></method>
+		<method name="get_sim_target_path" qualifiers="const"><return type="NodePath" /><description>返回当前目标路径。</description></method>
+	</methods>
+	<members>
+		<member name="active" type="bool" setter="set_active" getter="is_active" default="true">是否活动。</member>
+		<member name="force_pattern" type="int" setter="set_force_pattern" getter="get_force_pattern" default="0">力场模式。</member>
+		<member name="force" type="Vector2" setter="set_force" getter="get_force" default="Vector2(0, -1)">力矢量。</member>
+		<member name="force_radius" type="float" setter="set_force_radius" getter="get_force_radius" default="100.0">力场作用半径。</member>
+		<member name="emission_shape" type="int" setter="set_emission_shape" getter="get_emission_shape" default="1">力场形状。</member>
+		<member name="shape_size" type="Vector2" setter="set_shape_size" getter="get_shape_size" default="Vector2(1, 1)">形状尺寸。</member>
+		<member name="falloff_exponent" type="float" setter="set_falloff_exponent" getter="get_falloff_exponent" default="2.0">衰减指数。</member>
+		<member name="swirl_strength" type="float" setter="set_swirl_strength" getter="get_swirl_strength" default="1.0">漩涡强度。</member>
+		<member name="force_preset" type="int" setter="set_force_preset" getter="get_force_preset" default="0">力场预设。</member>
+		<member name="lifetime" type="float" setter="set_lifetime" getter="get_lifetime" default="0.0">生命周期（秒）。</member>
+		<member name="auto_destroy" type="bool" setter="set_auto_destroy" getter="is_auto_destroy" default="false">是否自动销毁。</member>
+		<member name="sim_target_path" type="NodePath" setter="set_sim_target_path" getter="get_sim_target_path" default="NodePath()">目标节点路径。</member>
+	</members>
+	<constants>
+	</constants>
+</class>

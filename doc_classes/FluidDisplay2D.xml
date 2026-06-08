@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidDisplay2D" inherits="Sprite2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		自动将 [GPUStableFluids2D] 的模拟输出纹理渲染到屏幕的 Sprite2D 子类。
+	</brief_description>
+	<description>
+		FluidDisplay2D 是一个即插即用的流体可视化节点。将其放入场景，指定 [member sim_source_path] 指向一个 [GPUStableFluids2D] 节点，即可自动渲染流体颜色场。
+
+		工作原理：
+		- [code]_ready()[/code] 时通过 [member sim_source_path] 找到模拟节点，获取其输出纹理（[method GPUStableFluids2D.get_output_texture]）并赋值给 Sprite2D 的 texture 属性。
+		- [code]_process()[/code] 时同步纹理 RID，确保每帧显示最新模拟结果。如果模拟尚未初始化，会在后续帧自动重试。
+		- 如果 [member auto_size] 为 true，自动设置 Scale 使显示尺寸匹配 [member GPUStableFluids2D.fluid_world_size]。
+
+		注意：默认位置应为流体域的左上角，即 [code](-fluid_world_size.x/2, -fluid_world_size.y/2)[/code]。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_sim_source_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置要显示的 [GPUStableFluids2D] 节点路径。</description>
+		</method>
+		<method name="get_sim_source_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前模拟源节点路径。</description>
+		</method>
+		<method name="set_display_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>
+				设置显示模式：
+				- [code]0[/code]（Density）：显示颜色/密度场（默认）
+				- [code]1[/code]（Velocity）：显示速度场
+				- [code]2[/code]（Pressure）：显示压力场
+				- [code]3[/code]（Divergence）：显示散度场
+				- [code]4[/code]（Vorticity）：显示涡量场
+				注意：目前仅 Density 模式完整实现，其他模式预留。
+			</description>
+		</method>
+		<method name="get_display_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前显示模式。</description>
+		</method>
+		<method name="set_auto_size">
+			<return type="void" />
+			<param index="0" name="enable" type="bool" />
+			<description>设置是否自动缩放显示尺寸以匹配流体域世界尺寸。默认开启。</description>
+		</method>
+		<method name="is_auto_size" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否启用自动尺寸调整。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="sim_source_path" type="NodePath" setter="set_sim_source_path" getter="get_sim_source_path" default="NodePath()">
+			指向 [GPUStableFluids2D] 模拟节点的路径。通常设为 [code]../GPUStableFluids2D[/code]。
+		</member>
+		<member name="display_mode" type="int" setter="set_display_mode" getter="get_display_mode" default="0">
+			显示模式：[code]0[/code]=Density, [code]1[/code]=Velocity, [code]2[/code]=Pressure, [code]3[/code]=Divergence, [code]4[/code]=Vorticity。
+		</member>
+		<member name="auto_size" type="bool" setter="set_auto_size" getter="is_auto_size" default="true">
+			是否自动缩放以匹配流体域尺寸。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

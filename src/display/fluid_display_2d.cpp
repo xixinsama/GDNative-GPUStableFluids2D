@@ -1,5 +1,6 @@
 #include "fluid_display_2d.h"
 #include "GPU_stable_fluids_2D_init.h"
+#include "core/fluid_debug_config.h"
 
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/core/class_db.hpp"
@@ -67,7 +68,7 @@ void FluidDisplay2D::_process(double p_delta) {
 	Ref<Texture2DRD> out_tex = sim->get_output_texture();
 	if (!out_tex.is_valid()) {
 		if (!_texture_warned) {
-			UtilityFunctions::printerr("[FluidDisplay2D] _process: get_output_texture() returned invalid ref! The simulation may not be initialized yet.");
+			FLUID_PRINTERR("[FluidDisplay2D] _process: get_output_texture() returned invalid ref! The simulation may not be initialized yet.");
 			_texture_warned = true;
 		}
 		return;

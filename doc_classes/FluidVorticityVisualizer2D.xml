@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidVorticityVisualizer2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		涡量/压力/散度调试可视化器，将流体内部物理量渲染为彩色叠加层。
+	</brief_description>
+	<description>
+		FluidVorticityVisualizer2D 是一个调试工具，用于可视化流体模拟的隐藏状态。它将涡量、压力、散度等内部场渲染为伪彩色图像，帮助理解和调试模拟行为。
+
+		[b]显示模式：[/b]
+		- [b]Density[/b]（密度）：颜色/密度场（与 [FluidDisplay2D] 相同）
+		- [b]Velocity[/b]（速度）：速度场（红=水平，绿=垂直）
+		- [b]Pressure[/b]（压力）：压力场（用于检查不可压缩性）
+		- [b]Divergence[/b]（散度）：散度场（理想情况下应接近零）
+		- [b]Vorticity[/b]（涡量）：涡量场（显示旋涡强度和位置）
+
+		[b]使用方式：[/b]
+		将节点放入场景，设置 [member sim_source_path] 指向模拟节点。在编辑器中切换 [member display_mode] 即可实时查看不同的内部场。这对于理解流体动力学和调试参数非常有用。
+
+		注意：此节点目前为预留接口，完整实现将在后续版本中添加。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_sim_source_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置 [GPUStableFluids2D] 模拟源节点路径。</description>
+		</method>
+		<method name="get_sim_source_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前模拟源路径。</description>
+		</method>
+		<method name="set_display_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>设置显示模式：0=Density, 1=Velocity, 2=Pressure, 3=Divergence, 4=Vorticity。</description>
+		</method>
+		<method name="get_display_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前显示模式。</description>
+		</method>
+		<method name="set_auto_update">
+			<return type="void" />
+			<param index="0" name="enabled" type="bool" />
+			<description>设置是否自动每帧更新可视化。</description>
+		</method>
+		<method name="is_auto_update" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否自动更新。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="sim_source_path" type="NodePath" setter="set_sim_source_path" getter="get_sim_source_path" default="NodePath()">
+			模拟源节点路径。
+		</member>
+		<member name="display_mode" type="int" setter="set_display_mode" getter="get_display_mode" default="4">
+			显示模式：0=Density, 1=Velocity, 2=Pressure, 3=Divergence, 4=Vorticity。默认为 Vorticity。
+		</member>
+		<member name="auto_update" type="bool" setter="set_auto_update" getter="is_auto_update" default="true">
+			是否自动更新可视化。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

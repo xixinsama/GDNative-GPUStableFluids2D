@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="FluidMouseInteractor2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		将鼠标/触摸输入转换为流体绘制请求，支持绘制、推、拉、漩涡四种交互模式。
+	</brief_description>
+	<description>
+		FluidMouseInteractor2D 是用户与流体交互的主要桥梁。它监听鼠标输入，将鼠标位置和移动速度转换为 [method GPUStableFluids2D.queue_draw_request] 调用。
+
+		通常放置为 [GPUStableFluids2D] 节点的子节点。如果设置了 [member sim_target_path]，也可以指向任意位置的模拟节点。
+
+		[b]交互模式：[/b]
+		- [b]Draw[/b]（绘制）：注入颜色 + 速度，模拟手指搅动颜料
+		- [b]Push[/b]（推）：以放大速度排斥流体远离光标
+		- [b]Pull[/b]（拉）：以放大速度吸引流体靠近光标
+		- [b]Swirl[/b]（漩涡）：在光标周围产生旋转力场
+
+		[b]使用示例：[/b]
+		[codeblock]
+		var interactor = FluidMouseInteractor2D.new()
+		interactor.brush_size = 8.0
+		interactor.velocity_scale = 0.2
+		interactor.draw_color = Color(1.0, 0.5, 0.0, 0.8)
+		add_child(interactor)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_sim_target_path">
+			<return type="void" />
+			<param index="0" name="path" type="NodePath" />
+			<description>设置目标 [GPUStableFluids2D] 节点路径。留空则自动使用父节点。</description>
+		</method>
+		<method name="get_sim_target_path" qualifiers="const">
+			<return type="NodePath" />
+			<description>返回当前目标模拟节点路径。</description>
+		</method>
+		<method name="set_mouse_button">
+			<return type="void" />
+			<param index="0" name="button" type="int" />
+			<description>设置触发交互的鼠标按钮。1=左键（默认），2=右键，3=中键。</description>
+		</method>
+		<method name="get_mouse_button" qualifiers="const">
+			<return type="int" />
+			<description>返回当前触发按钮。</description>
+		</method>
+		<method name="set_draw_color">
+			<return type="void" />
+			<param index="0" name="color" type="Color" />
+			<description>设置在绘制模式（Draw）下注入的颜色。Alpha 通道控制密度强度。</description>
+		</method>
+		<method name="get_draw_color" qualifiers="const">
+			<return type="Color" />
+			<description>返回当前绘制颜色。</description>
+		</method>
+		<method name="set_brush_size">
+			<return type="void" />
+			<param index="0" name="size" type="float" />
+			<description>设置笔刷大小。控制 splat 的空间范围。范围：1.0~100.0，默认 5.0。</description>
+		</method>
+		<method name="get_brush_size" qualifiers="const">
+			<return type="float" />
+			<description>返回当前笔刷大小。</description>
+		</method>
+		<method name="set_velocity_scale">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>设置鼠标速度到流体速度的缩放因子。值越大，拖动时产生的速度越大。范围：0.0~1.0，默认 0.1。</description>
+		</method>
+		<method name="get_velocity_scale" qualifiers="const">
+			<return type="float" />
+			<description>返回当前速度缩放因子。</description>
+		</method>
+		<method name="set_continuous_draw">
+			<return type="void" />
+			<param index="0" name="enable" type="bool" />
+			<description>设置是否持续绘制。启用时（默认），按住鼠标按钮期间持续产生绘制请求；禁用时仅按下瞬间产生一次。</description>
+		</method>
+		<method name="is_continuous_draw" qualifiers="const">
+			<return type="bool" />
+			<description>返回是否启用持续绘制。</description>
+		</method>
+		<method name="set_interaction_mode">
+			<return type="void" />
+			<param index="0" name="mode" type="int" />
+			<description>
+				设置交互模式：
+				- [code]0[/code]（Draw）：绘制颜色+速度
+				- [code]1[/code]（Push）：推开流体
+				- [code]2[/code]（Pull）：拉近流体
+				- [code]3[/code]（Swirl）：漩涡旋转
+			</description>
+		</method>
+		<method name="get_interaction_mode" qualifiers="const">
+			<return type="int" />
+			<description>返回当前交互模式。</description>
+		</method>
+	</methods>
+	<members>
+		<member name="sim_target_path" type="NodePath" setter="set_sim_target_path" getter="get_sim_target_path" default="NodePath()">
+			目标 [GPUStableFluids2D] 节点路径。
+		</member>
+		<member name="mouse_button" type="int" setter="set_mouse_button" getter="get_mouse_button" default="1">
+			触发的鼠标按钮。1=左键, 2=右键, 3=中键。
+		</member>
+		<member name="draw_color" type="Color" setter="set_draw_color" getter="get_draw_color" default="Color(1, 1, 1, 1)">
+			绘制模式下的注入颜色。
+		</member>
+		<member name="brush_size" type="float" setter="set_brush_size" getter="get_brush_size" default="5.0">
+			笔刷半径。范围：1.0~100.0。
+		</member>
+		<member name="velocity_scale" type="float" setter="set_velocity_scale" getter="get_velocity_scale" default="0.1">
+			鼠标速度缩放因子。范围：0.0~1.0。
+		</member>
+		<member name="continuous_draw" type="bool" setter="set_continuous_draw" getter="is_continuous_draw" default="true">
+			是否持续绘制。
+		</member>
+		<member name="interaction_mode" type="int" setter="set_interaction_mode" getter="get_interaction_mode" default="0">
+			交互模式：[code]0[/code]=Draw, [code]1[/code]=Push, [code]2[/code]=Pull, [code]3[/code]=Swirl。
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>
