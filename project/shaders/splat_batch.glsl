@@ -4,12 +4,18 @@
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 // Storage buffer with batch point data
+// Must match C++ BatchPoint layout exactly:
+//   float pos[2]; float vel[2]; float color[4];
+//   float color_radius; float vel_radius; float _pad[2];
+// std430 array stride = 48 bytes
 struct BatchPoint {
-    vec2 pos;        // 8 bytes
-    vec2 vel;        // 8 bytes
-    vec4 color;      // 16 bytes
-    float color_r;   // 4 bytes
-    float vel_r;     // 4 bytes
+    vec2 pos;           // offset 0, 8 bytes
+    vec2 vel;           // offset 8, 8 bytes
+    vec4 color;         // offset 16, 16 bytes
+    float color_r;      // offset 32, 4 bytes
+    float vel_r;        // offset 36, 4 bytes
+    float _pad0;        // offset 40, 4 bytes
+    float _pad1;        // offset 44, 4 bytes
 };
 
 layout(set = 0, binding = 0, std430) restrict readonly buffer BatchBuffer {

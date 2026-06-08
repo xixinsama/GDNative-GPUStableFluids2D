@@ -45,7 +45,7 @@ void main() {
         if (sample_uv.x >= 0.0 && sample_uv.x <= 1.0 && sample_uv.y >= 0.0 && sample_uv.y <= 1.0) {
             float obs_neighbor = texture(obstacle_tex, sample_uv).a;
             if (obs_neighbor > 0.1) {
-                // Obstacle neighbor — read its velocity (encoded in RG channels)
+                // Obstacle neighbor -- read its velocity (encoded in RG channels)
                 vec2 obs_vel = texture(obstacle_tex, sample_uv).rg;
                 force += obs_vel * params.obstacle_force_strength;
             }
@@ -55,7 +55,7 @@ void main() {
     // Check if obstacle is approaching (compare current vs previous)
     float obs_pre = texture(obstacle_pre_tex, uv).a;
     if (obs_current < 0.1 && obs_pre > 0.1) {
-        // Obstacle just left this cell — push fluid away
+        // Obstacle just left this cell -- push fluid away
         vec2 obs_vel = texture(obstacle_pre_tex, uv).rg;
         force += obs_vel * params.obstacle_force_strength * 2.0;
     }

@@ -203,7 +203,9 @@ void FluidEmitter2D::_ready() {
 	_timer = 0;
 	_life_timer = 0;
 	_has_emitted = false;
-	_apply_preset(_emission_preset);
+	// Note: _apply_preset() is NOT called here because it was already called
+	// by set_emission_preset() during scene property application. Calling it
+	// again would overwrite any individual property overrides set in the scene.
 }
 
 void FluidEmitter2D::_process(double p_delta) {

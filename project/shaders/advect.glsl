@@ -6,8 +6,9 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // Set 0: the field being advected (sampled as texture)
 layout(set = 0, binding = 0) uniform sampler2D input_field;
 
-// Set 1: velocity field (image, readonly)
-layout(rgba32f, set = 1, binding = 0) uniform restrict readonly image2D velocity_field;
+// Set 1: velocity field (sampled as texture -- avoids Vulkan layout conflict
+// when self-advecting where input_field == velocity_field)
+layout(set = 1, binding = 0) uniform sampler2D velocity_field;
 
 // Set 2: output (image, writeonly)
 layout(rgba32f, set = 2, binding = 0) uniform restrict writeonly image2D output_field;
@@ -25,7 +26,8 @@ void main() {
 
     // Backtrace: uv - velocity * dt / resolution
     vec2 uv = (vec2(pixel) + 0.5) / params.resolution;
-    vec2 vel = imageLoad(velocity_field, pixel).xy;
+    // Use texelFetch for exact pixel read (equivalent to old imageLoad)
+    vec2 vel = texelFetch(velocity_field, pixel, 0).xy;
     vec2 prev_uv = uv - vel * params.dt / params.resolution;
     prev_uv = clamp(prev_uv, 0.0, 1.0);
 

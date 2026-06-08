@@ -103,6 +103,8 @@ public:
 	Vector2          sample_velocity(Vector2 p_world_pos) const;
 	Vector2          get_domain_offset() const;
 	GPUResourceManager *get_gpu_resources() { return &_gpu_resources; }
+		const DrawRequest *get_draw_requests() const { return _draw_requests; }
+		int get_draw_request_count() const { return _draw_request_count; }
 
 	void _ready() override;
 	void _process(double p_delta) override;
@@ -113,6 +115,7 @@ protected:
 private:
 	void _initialise_gpu();
 	void _recreate_gpu_resources();
+	void _upload_batch_data();
 
 	// ---- Simulation parameters ----
 	int   width           = 512;
@@ -157,6 +160,7 @@ private:
 	bool _initialized    = false;
 	bool _needs_recreate = false;
 
+	int _frame_count = 0;
 	int _x_groups = 0;
 	int _y_groups = 0;
 };

@@ -46,13 +46,14 @@ private:
 	void _step_solve_pressure(int iter);
 	void _step_subtract_gradient(float half_rdx);
 	void _step_boundary();
+	void _step_splat_batch(int point_count, float p_dt);
 	void _step_obstacle_force(float dt, float strength);
 	void _step_copy_obstacle();
 
 	GPUResourceManager *_gpu = nullptr;
 	int _x_groups = 0, _y_groups = 0;
 
-	PackedByteArray _pc_adv, _pc_jac, _pc_div, _pc_sub, _pc_bv, _pc_bp, _pc_vor, _pc_shift;
+	PackedByteArray _pc_adv, _pc_jac, _pc_div, _pc_sub, _pc_bv, _pc_bp, _pc_vor, _pc_shift, _pc_splat;
 };
 
 } // namespace godot

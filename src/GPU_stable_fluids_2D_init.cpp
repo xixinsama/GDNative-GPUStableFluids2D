@@ -194,6 +194,10 @@ void GPUStableFluids2D::_process(double p_delta) {
 	if (Engine::get_singleton()->is_editor_hint()) return;
 	if (!_initialized) return;
 
+	if (_frame_count == 0) {
+		UtilityFunctions::print("[GPUStableFluids2D] _process() first frame START");
+	}
+
 	if (_needs_recreate) {
 		_recreate_gpu_resources();
 		_needs_recreate = false;
@@ -282,27 +286,118 @@ void GPUStableFluids2D::_process(double p_delta) {
 	}
 
 	// Run the full simulation pipeline
+	// Upload draw requests to GPU before pipeline
+	_upload_batch_data();
+
 	// Process obstacles (CPU rasterization → GPU upload)
 	_obstacle_drawer.process_frame();
 
 	_render_pipeline.execute((float)p_delta, this);
 
-	// Update output texture
-	if (_output_texture.is_valid()) {
-		_output_texture->set_texture_rd_rid(_gpu_resources.tex_color);
-	}
+	// Copy compute output (tex_color, has STORAGE_BIT → GENERAL layout)
+	// to the display texture (tex_display, no STORAGE_BIT → SHADER_READ_ONLY_OPTIMAL).
+	// Forward+ can only safely sample textures in SHADER_READ_ONLY_OPTIMAL layout.
+	// texture_copy() handles the Vulkan layout transitions for both source and dest.
+	rd->texture_copy(
+		_gpu_resources.tex_color,   // source (GENERAL → TRANSFER_SRC → GENERAL)
+		_gpu_resources.tex_display, // dest   (READ_ONLY → TRANSFER_DST → READ_ONLY)
+		Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
+		0, 0, 0, 0);
 
 	_draw_request_count = 0;
+	if (_frame_count == 0) {
+		UtilityFunctions::print("[GPUStableFluids2D] _process() first frame DONE");
+	}
+	_frame_count++;
 }
 
 // ──────────────────────────────────────────────────────────
 //  GPU initialisation
 // ──────────────────────────────────────────────────────────
 
+void GPUStableFluids2D::_upload_batch_data() {
+	if (_draw_request_count == 0) return;
+	RenderingDevice *rd = _gpu_resources.device;
+	if (!rd) return;
+
+	// Compute domain center for world-to-UV conversion
+	Vector2 domain_center(0, 0);
+	if (follow_mode == FollowMode::Node2D && _follow_node) {
+		domain_center = _follow_node->get_global_position();
+	} else if (follow_mode == FollowMode::Camera2D) {
+		domain_center = _previous_follow_pos;
+	}
+
+	// Pack draw requests into a single byte array with UV coordinates
+	PackedByteArray pba;
+	pba.resize(_draw_request_count * sizeof(BatchPoint));
+	uint8_t *dst = pba.ptrw();
+
+	for (int i = 0; i < _draw_request_count; i++) {
+		const DrawRequest &req = _draw_requests[i];
+
+		// Convert world position to UV [0,1]
+		Vector2 local = req.position - domain_center;
+		float u = local.x / fluid_world_size.x + 0.5f;
+		float v = local.y / fluid_world_size.y + 0.5f;
+
+		BatchPoint bp;
+		bp.pos[0] = u;
+		bp.pos[1] = v;
+		bp.vel[0] = req.velocity.x;
+		bp.vel[1] = req.velocity.y;
+		bp.color[0] = req.color.r;
+		bp.color[1] = req.color.g;
+		bp.color[2] = req.color.b;
+		bp.color[3] = req.color.a;
+		bp.color_radius = req.color_radius;
+		bp.vel_radius = req.velocity_radius;
+		bp._pad[0] = 0.0f;
+		bp._pad[1] = 0.0f;
+
+		std::memcpy(dst + i * sizeof(BatchPoint), &bp, sizeof(BatchPoint));
+	}
+
+	rd->buffer_update(_gpu_resources.batch_buffer, 0, pba.size(), pba);
+}
+
 void GPUStableFluids2D::_initialise_gpu() {
+	RenderingDevice *rd = RenderingServer::get_singleton()->get_rendering_device();
+	if (!rd) {
+		UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: No RenderingDevice available! GPU init skipped. "
+			"This is expected in Compatibility renderer. Switch to Forward+ or Mobile for GPU compute support.");
+		return;
+	}
+	UtilityFunctions::print("[GPUStableFluids2D] RenderingDevice obtained: ", rd->get_device_name());
+
 	_gpu_resources.initialize(
-		RenderingServer::get_singleton()->get_rendering_device(),
+		rd,
 		width, height, subtractive_mixing, clear_color, 4096, 32);
+
+	// Verify critical pipelines loaded successfully
+	bool all_ok = true;
+	auto check_pipeline = [&](const ComputePipeline &p, const char *name) {
+		if (!p.is_valid()) {
+			UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: Pipeline '", name, "' failed to load!");
+			all_ok = false;
+		}
+	};
+	check_pipeline(_gpu_resources.advect_pipeline, "advect");
+	check_pipeline(_gpu_resources.jacobi_pipeline, "jacobi");
+	check_pipeline(_gpu_resources.divergence_pipeline, "divergence");
+	check_pipeline(_gpu_resources.subtract_pipeline, "subtract");
+	check_pipeline(_gpu_resources.boundary_pipeline, "boundary");
+	check_pipeline(_gpu_resources.vorticity_pipeline, "vorticity");
+	check_pipeline(_gpu_resources.splat_batch_pipeline, "splat_batch");
+	check_pipeline(_gpu_resources.obstacle_force_pipeline, "obstacle_force");
+	check_pipeline(_gpu_resources.shift_texture_pipeline, "shift_texture");
+	check_pipeline(_gpu_resources.copy_texture_pipeline, "copy_texture");
+
+	if (!all_ok) {
+		UtilityFunctions::printerr("[GPUStableFluids2D] ERROR: Some GPU pipelines failed to load. Simulation will be disabled.");
+		_gpu_resources.terminate();
+		return;
+	}
 
 	_x_groups = (width  + 7) / 8;
 	_y_groups = (height + 7) / 8;
@@ -310,15 +405,17 @@ void GPUStableFluids2D::_initialise_gpu() {
 	_render_pipeline.initialize(&_gpu_resources, _x_groups, _y_groups);
 
 	_output_texture.instantiate();
-	_output_texture->set_texture_rd_rid(_gpu_resources.tex_color);
+	_output_texture->set_texture_rd_rid(_gpu_resources.tex_display);
 
 	_obstacle_drawer.initialize(this);
 
 	_initialized = true;
+	UtilityFunctions::print("[GPUStableFluids2D] GPU initialization complete. All pipelines ready.");
 	emit_signal("simulation_initialized");
 }
 
 void GPUStableFluids2D::_recreate_gpu_resources() {
+	_initialized = false;
 	_gpu_resources.terminate();
 	_initialise_gpu();
 }

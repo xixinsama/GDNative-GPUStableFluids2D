@@ -37,6 +37,7 @@ private:
 	NodePath _sim_source_path;
 	DisplayMode _display_mode = DisplayMode::Density;
 	bool _auto_size = true;
+	bool _texture_warned = false;
 };
 
 } // namespace godot

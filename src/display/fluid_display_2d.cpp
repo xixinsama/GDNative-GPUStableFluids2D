@@ -1,7 +1,9 @@
 #include "fluid_display_2d.h"
 #include "GPU_stable_fluids_2D_init.h"
 
+#include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/core/class_db.hpp"
+#include "godot_cpp/variant/utility_functions.hpp"
 
 namespace godot {
 
@@ -32,6 +34,8 @@ void FluidDisplay2D::set_auto_size(bool p_enable) { _auto_size = p_enable; }
 bool FluidDisplay2D::is_auto_size() const { return _auto_size; }
 
 void FluidDisplay2D::_ready() {
+	if (Engine::get_singleton()->is_editor_hint()) return;
+
 	if (_sim_source_path.is_empty()) return;
 
 	Node *src = get_node_or_null(_sim_source_path);
@@ -52,15 +56,34 @@ void FluidDisplay2D::_ready() {
 }
 
 void FluidDisplay2D::_process(double p_delta) {
+	if (Engine::get_singleton()->is_editor_hint()) return;
+
 	if (_sim_source_path.is_empty()) return;
 	Node *src = get_node_or_null(_sim_source_path);
 	if (!src) return;
 	GPUStableFluids2D *sim = Object::cast_to<GPUStableFluids2D>(src);
 	if (!sim) return;
 
+	Ref<Texture2DRD> out_tex = sim->get_output_texture();
+	if (!out_tex.is_valid()) {
+		if (!_texture_warned) {
+			UtilityFunctions::printerr("[FluidDisplay2D] _process: get_output_texture() returned invalid ref! The simulation may not be initialized yet.");
+			_texture_warned = true;
+		}
+		return;
+	}
+
 	Ref<Texture2DRD> tex = get_texture();
 	if (tex.is_valid()) {
-		tex->set_texture_rd_rid(sim->get_output_texture()->get_texture_rd_rid());
+		tex->set_texture_rd_rid(out_tex->get_texture_rd_rid());
+	} else {
+		// Texture was never set in _ready() (sim wasn't ready yet), set it now.
+		set_texture(out_tex);
+		if (_auto_size) {
+			Vector2 ws = sim->get_fluid_world_size();
+			set_scale(Vector2(ws.x / (float)sim->get_width(),
+			                  ws.y / (float)sim->get_height()));
+		}
 	}
 }
 

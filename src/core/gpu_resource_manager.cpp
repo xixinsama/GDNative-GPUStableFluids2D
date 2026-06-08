@@ -1,4 +1,5 @@
 #include "gpu_resource_manager.h"
+#include "utils/draw_request.h"
 
 #include "godot_cpp/classes/rd_shader_file.hpp"
 #include "godot_cpp/classes/rd_shader_spirv.hpp"
@@ -18,6 +19,11 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	width  = p_width;
 	height = p_height;
 
+	if (!device) {
+		UtilityFunctions::printerr("[GPUResourceManager] ERROR: Null RenderingDevice passed to initialize()");
+		return;
+	}
+
 	// --- Sampler ---
 	Ref<RDSamplerState> sampler_state;
 	sampler_state.instantiate();
@@ -28,10 +34,19 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	sampler = device->sampler_create(sampler_state);
 
 	// --- Texture format ---
+	// CAN_COPY_FROM_BIT is REQUIRED for Forward+ renderer to read RD textures
+	// for display (e.g., Texture2DRD used in Sprite2D). Without it, Vulkan
+	// rejects the copy-source operation and Forward+ crashes.
 	constexpr uint32_t usage = RenderingDevice::TEXTURE_USAGE_STORAGE_BIT |
 	                           RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT |
 	                           RenderingDevice::TEXTURE_USAGE_CAN_COPY_TO_BIT |
+	                           RenderingDevice::TEXTURE_USAGE_CAN_COPY_FROM_BIT |
 	                           RenderingDevice::TEXTURE_USAGE_CAN_UPDATE_BIT;
+
+	// Display-only texture usage (no STORAGE_BIT → SHADER_READ_ONLY_OPTIMAL layout
+	// after any operation, safe for Forward+ renderer to sample)
+	constexpr uint32_t usage_display = RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT |
+	                                   RenderingDevice::TEXTURE_USAGE_CAN_COPY_TO_BIT;
 
 	const RenderingDevice::DataFormat fmt = RenderingDevice::DATA_FORMAT_R32G32B32A32_SFLOAT;
 
@@ -43,6 +58,9 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	tex_temp       = create_texture(width, height, fmt, usage);
 	tex_obstacle      = create_texture(width, height, fmt, usage);
 	tex_obstacle_pre  = create_texture(width, height, fmt, usage);
+	// Display texture — no STORAGE_BIT so its Vulkan layout is always
+	// SHADER_READ_ONLY_OPTIMAL, which Forward+ can safely sample from.
+	tex_display      = create_texture(width, height, fmt, usage_display);
 
 	// Clear to initial values
 	Color black(0, 0, 0, 1);
@@ -59,23 +77,36 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	} else {
 		device->texture_clear(tex_color, p_clear_color, 0, 1, 0, 1);
 	}
+	// Clear display texture too
+	device->texture_clear(tex_display, p_clear_color, 0, 1, 0, 1);
 
 	// --- Compute pipelines ---
+	UtilityFunctions::print("[GPUResourceManager] Loading shader pipelines...");
 	advect_pipeline         = create_compute_pipeline("res://shaders/advect.glsl");
+	UtilityFunctions::print("[GPUResourceManager] advect: valid=", advect_pipeline.is_valid());
 	jacobi_pipeline         = create_compute_pipeline("res://shaders/jacobi.glsl");
+	UtilityFunctions::print("[GPUResourceManager] jacobi: valid=", jacobi_pipeline.is_valid());
 	divergence_pipeline     = create_compute_pipeline("res://shaders/divergence.glsl");
+	UtilityFunctions::print("[GPUResourceManager] divergence: valid=", divergence_pipeline.is_valid());
 	subtract_pipeline       = create_compute_pipeline("res://shaders/subtract.glsl");
+	UtilityFunctions::print("[GPUResourceManager] subtract: valid=", subtract_pipeline.is_valid());
 	boundary_pipeline       = create_compute_pipeline("res://shaders/boundary.glsl");
+	UtilityFunctions::print("[GPUResourceManager] boundary: valid=", boundary_pipeline.is_valid());
 	vorticity_pipeline      = create_compute_pipeline("res://shaders/vorticity.glsl");
+	UtilityFunctions::print("[GPUResourceManager] vorticity: valid=", vorticity_pipeline.is_valid());
 	shift_texture_pipeline  = create_compute_pipeline("res://shaders/shift_texture.glsl");
+	UtilityFunctions::print("[GPUResourceManager] shift_texture: valid=", shift_texture_pipeline.is_valid());
 	splat_batch_pipeline    = create_compute_pipeline("res://shaders/splat_batch.glsl");
+	UtilityFunctions::print("[GPUResourceManager] splat_batch: valid=", splat_batch_pipeline.is_valid());
 	obstacle_force_pipeline = create_compute_pipeline("res://shaders/obstacle_force.glsl");
+	UtilityFunctions::print("[GPUResourceManager] obstacle_force: valid=", obstacle_force_pipeline.is_valid());
 	copy_texture_pipeline   = create_compute_pipeline("res://shaders/copy_texture.glsl");
+	UtilityFunctions::print("[GPUResourceManager] copy_texture: valid=", copy_texture_pipeline.is_valid());
 
 	// --- Storage buffers ---
 	{
 		PackedByteArray empty;
-		batch_buffer = device->storage_buffer_create(p_max_batch_points * sizeof(float) * 10, empty); // 40 bytes / point
+		batch_buffer = device->storage_buffer_create(p_max_batch_points * sizeof(BatchPoint), empty); // 48 bytes / point
 		force_emitter_buffer = device->storage_buffer_create(p_max_force_emitters * sizeof(float) * 12, empty); // 48 bytes / emitter
 	}
 }
@@ -94,6 +125,7 @@ void GPUResourceManager::terminate() {
 	safe_free_rid(tex_temp);
 	safe_free_rid(tex_obstacle);
 	safe_free_rid(tex_obstacle_pre);
+	safe_free_rid(tex_display);
 
 	safe_free_rid(batch_buffer);
 	safe_free_rid(force_emitter_buffer);
@@ -120,6 +152,7 @@ void GPUResourceManager::clear_textures(const Color &p_clear_color) {
 	device->texture_clear(tex_color,      p_clear_color, 0, 1, 0, 1);
 	device->texture_clear(tex_divergence, black, 0, 1, 0, 1);
 	device->texture_clear(tex_temp,       black, 0, 1, 0, 1);
+	device->texture_clear(tex_display,   p_clear_color, 0, 1, 0, 1);
 }
 
 // ──────────────────────────────────────────────────────────

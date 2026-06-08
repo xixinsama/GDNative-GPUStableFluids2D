@@ -24,7 +24,7 @@ void main() {
     bool on_top    = (pixel.y == int(params.resolution.y) - 1);
 
     if (!on_left && !on_right && !on_bottom && !on_top) {
-        // Not a boundary cell — passthrough
+        // Not a boundary cell -- passthrough
         imageStore(output_field, pixel, imageLoad(input_field, pixel));
         return;
     }
@@ -49,8 +49,8 @@ void main() {
     }
 
     // For pressure (scalar): flip sign based on scale
-    // scale = -1.0 → no-slip for velocity
-    // scale =  1.0 → Neumann for pressure
+    // scale = -1.0 -> no-slip for velocity
+    // scale =  1.0 -> Neumann for pressure
     result.zw = vec2(0, 1);
 
     imageStore(output_field, pixel, result);
