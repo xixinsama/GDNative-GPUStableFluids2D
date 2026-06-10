@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://canvoy005b6ke"]
+
+[ext_resource type="Script" path="res://demo_emitters.gd" id="1_ctrl"]
+
+[node name="EmitterDemo" type="Node2D"]
+script = ExtResource("1_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoPanel" type="Panel" parent="UI"]
+custom_minimum_size = Vector2(720, 140)
+layout_mode = 1
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 730.0
+offset_bottom = 150.0
+modulate = Color(0, 0, 0, 0.7)
+
+[node name="VBox" type="VBoxContainer" parent="UI/InfoPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+bbcode_enabled = true
+text = "FluidEmitter2D"
+
+[node name="StatusLabel" type="Label" parent="UI/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
+text = ""
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="."]
+fluid_world_size = Vector2(800, 600)
+
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="."]
+sim_source_path = NodePath("../GPUStableFluids2D")
+position = Vector2(-400, -300)
+
+[node name="Camera2D" type="Camera2D" parent="."]

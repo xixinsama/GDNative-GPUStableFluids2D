@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://demoforce001"]
+
+[ext_resource type="Script" uid="uid://d3i8m5ep7yf3j" path="res://demo_force_fields.gd" id="1_ctrl"]
+
+[node name="ForceFieldDemo" type="Node2D" unique_id=357642206]
+script = ExtResource("1_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=184235409]
+
+[node name="InfoPanel" type="Panel" parent="UI" unique_id=1805291247]
+custom_minimum_size = Vector2(600, 150)
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 610.0
+offset_bottom = 160.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/InfoPanel" unique_id=188154387]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=2000324633]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "FluidForceEmitter2D"
+
+[node name="StatusLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=1554468032]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=1850073554]
+fluid_world_size = Vector2(800, 600)
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=1853547366]
+sim_target_path = NodePath("..")
+draw_color = Color(1, 1, 1, 0.9)
+brush_size = 8.0
+velocity_scale = 0.15
+
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="." unique_id=1557420798]
+sim_source_path = NodePath("../GPUStableFluids2D")
+position = Vector2(-400, -300)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1614332427]

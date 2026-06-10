@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://can6ea0g24rke"]
+
+[ext_resource type="Script" uid="uid://blkilje67fbbb" path="res://demo_obstacles.gd" id="1_ctrl"]
+[ext_resource type="Texture2D" uid="uid://dbx66sovxd1" path="res://icon.svg" id="2_801v8"]
+
+[sub_resource type="RectangleShape2D" id="rect"]
+size = Vector2(500, 20)
+
+[sub_resource type="CircleShape2D" id="circle"]
+radius = 32.0
+
+[node name="ObstacleDemo" type="Node2D" unique_id=355442489]
+script = ExtResource("1_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=111315975]
+
+[node name="InfoPanel" type="Panel" parent="UI" unique_id=310407414]
+custom_minimum_size = Vector2(440, 160)
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 450.0
+offset_bottom = 170.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/InfoPanel" unique_id=250790344]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=120396543]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "FluidObstacle2D"
+
+[node name="StatusLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=2116044691]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
+
+[node name="GPUStableFluids2D2" type="GPUStableFluids2D" parent="." unique_id=70770941]
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D2" unique_id=60804010]
+sim_target_path = NodePath("..")
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=397834805]
+obstacle_force_strength = 10.0
+fluid_world_size = Vector2(800, 600)
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=352003794]
+sim_target_path = NodePath("..")
+draw_color = Color(1, 0.6, 0.2, 0.9)
+brush_size = 12.0
+velocity_scale = 0.25
+
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="." unique_id=1407856462]
+sim_source_path = NodePath("../GPUStableFluids2D")
+position = Vector2(-400, -300)
+
+[node name="FluidDisplay2D2" type="FluidDisplay2D" parent="." unique_id=94782290]
+sim_source_path = NodePath("../GPUStableFluids2D2")
+position = Vector2(-400, -300)
+
+[node name="StaticBarrier" type="StaticBody2D" parent="." unique_id=1996702126]
+position = Vector2(1, -114)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBarrier" unique_id=1935481771]
+shape = SubResource("rect")
+
+[node name="FluidObstacle2D" type="FluidObstacle2D" parent="StaticBarrier" unique_id=1784816973]
+
+[node name="MovingBall" type="RigidBody2D" parent="." unique_id=530134576]
+position = Vector2(169, -12)
+gravity_scale = 0.0
+linear_velocity = Vector2(-80, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MovingBall" unique_id=1910715330]
+shape = SubResource("circle")
+
+[node name="FluidObstacle2D" type="FluidObstacle2D" parent="MovingBall" unique_id=799474893]
+obstacle_texture = ExtResource("2_801v8")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=80631790]

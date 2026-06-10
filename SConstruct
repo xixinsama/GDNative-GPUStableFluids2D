@@ -5,7 +5,7 @@ import sys
 from methods import print_error
 
 libname = "GPUStableFluids2D"
-projectdir = "project"
+projectdir = "demo"
 
 localEnv = Environment(tools=["default"], PLATFORM="windows")
 
@@ -45,11 +45,9 @@ suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), libname, suffix, env.subst('$SHLIBSUFFIX'))
 
 library = env.SharedLibrary(
-    "bin/{}/{}".format(env['platform'], lib_filename),
+    "{}/bin/{}/{}".format(projectdir, env['platform'], lib_filename),
     source=sources,
 )
 
-copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
-
-default_args = [library, copy]
+default_args = [library]
 Default(*default_args)

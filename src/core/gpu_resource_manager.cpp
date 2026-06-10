@@ -61,7 +61,10 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	tex_obstacle_pre  = create_texture(width, height, fmt, usage);
 	// Display texture — no STORAGE_BIT so its Vulkan layout is always
 	// SHADER_READ_ONLY_OPTIMAL, which Forward+ can safely sample from.
-	tex_display      = create_texture(width, height, fmt, usage_display);
+	tex_display            = create_texture(width, height, fmt, usage_display);
+		tex_display_velocity   = create_texture(width, height, fmt, usage_display);
+		tex_display_pressure   = create_texture(width, height, fmt, usage_display);
+		tex_display_divergence = create_texture(width, height, fmt, usage_display);
 
 	// NOTE: texture_clear is NOT called here because RenderingDevice
 	// command submission MUST happen on the render thread. Callers must
@@ -113,6 +116,9 @@ void GPUResourceManager::terminate() {
 	safe_free_rid(tex_obstacle);
 	safe_free_rid(tex_obstacle_pre);
 	safe_free_rid(tex_display);
+	safe_free_rid(tex_display_velocity);
+	safe_free_rid(tex_display_pressure);
+	safe_free_rid(tex_display_divergence);
 
 	safe_free_rid(batch_buffer);
 	safe_free_rid(force_emitter_buffer);
@@ -139,7 +145,10 @@ void GPUResourceManager::clear_textures(const Color &p_clear_color) {
 	device->texture_clear(tex_color,      p_clear_color, 0, 1, 0, 1);
 	device->texture_clear(tex_divergence, black, 0, 1, 0, 1);
 	device->texture_clear(tex_temp,       black, 0, 1, 0, 1);
-	device->texture_clear(tex_display,   p_clear_color, 0, 1, 0, 1);
+	device->texture_clear(tex_display,            p_clear_color, 0, 1, 0, 1);
+	device->texture_clear(tex_display_velocity,   black,         0, 1, 0, 1);
+	device->texture_clear(tex_display_pressure,   black,         0, 1, 0, 1);
+	device->texture_clear(tex_display_divergence, black,         0, 1, 0, 1);
 }
 
 // ──────────────────────────────────────────────────────────

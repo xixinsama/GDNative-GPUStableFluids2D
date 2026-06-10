@@ -18,9 +18,9 @@ FluidLightOccluder2D::FluidLightOccluder2D() = default;
 FluidLightOccluder2D::~FluidLightOccluder2D() { _clear_occluders(); }
 
 void FluidLightOccluder2D::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_sim_source_path", "path"), &FluidLightOccluder2D::set_sim_source_path);
-	ClassDB::bind_method(D_METHOD("get_sim_source_path"), &FluidLightOccluder2D::get_sim_source_path);
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "sim_source_path"), "set_sim_source_path", "get_sim_source_path");
+	ClassDB::bind_method(D_METHOD("set_sim_target", "path"), &FluidLightOccluder2D::set_sim_target);
+	ClassDB::bind_method(D_METHOD("get_sim_target"), &FluidLightOccluder2D::get_sim_target);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sim_target", PROPERTY_HINT_NODE_TYPE, "GPUStableFluids2D"), "set_sim_target", "get_sim_target");
 
 	ClassDB::bind_method(D_METHOD("set_density_threshold", "threshold"), &FluidLightOccluder2D::set_density_threshold);
 	ClassDB::bind_method(D_METHOD("get_density_threshold"), &FluidLightOccluder2D::get_density_threshold);
@@ -49,8 +49,8 @@ void FluidLightOccluder2D::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("contours_updated", PropertyInfo(Variant::INT, "count")));
 }
 
-void FluidLightOccluder2D::set_sim_source_path(const NodePath &v) { _sim_source_path = v; }
-NodePath FluidLightOccluder2D::get_sim_source_path() const { return _sim_source_path; }
+void FluidLightOccluder2D::set_sim_target(const NodePath &v) { _sim_target = v; }
+NodePath FluidLightOccluder2D::get_sim_target() const { return _sim_target; }
 void FluidLightOccluder2D::set_density_threshold(float v) { _density_threshold = v; }
 float FluidLightOccluder2D::get_density_threshold() const { return _density_threshold; }
 void FluidLightOccluder2D::set_max_contours(int v) { _max_contours = v; }
@@ -65,8 +65,8 @@ void FluidLightOccluder2D::set_downscale_factor(int v) { _downscale_factor = v; 
 int FluidLightOccluder2D::get_downscale_factor() const { return _downscale_factor; }
 
 GPUStableFluids2D *FluidLightOccluder2D::_find_sim() const {
-	if (!_sim_source_path.is_empty()) {
-		Node *n = get_node_or_null(_sim_source_path);
+	if (!_sim_target.is_empty()) {
+		Node *n = get_node_or_null(_sim_target);
 		if (n) return Object::cast_to<GPUStableFluids2D>(n);
 	}
 	SceneTree *tree = get_tree();
@@ -187,5 +187,4 @@ void FluidLightOccluder2D::_process(double p_delta) {
 		_update_timer -= interval;
 	}
 }
-
 } // namespace godot

@@ -1,0 +1,43 @@
+[configuration]
+
+entry_symbol = "fluid_sim_library_init"
+compatibility_minimum = "4.2"
+
+[libraries]
+
+windows.editor.x86_64 = "windows/GPUStableFluids2D.windows.editor.x86_64.dll"
+windows.template_debug.x86_64 = "windows/GPUStableFluids2D.windows.template_debug.x86_64.dll"
+windows.template_debug.x86_32 = "windows/GPUStableFluids2D.windows.template_debug.x86_32.dll"
+windows.template_debug.arm64 = "windows/GPUStableFluids2D.windows.template_debug.arm64.dll"
+windows.template_release.x86_64 = "windows/GPUStableFluids2D.windows.template_release.x86_64.dll"
+windows.template_release.x86_32 = "windows/GPUStableFluids2D.windows.template_release.x86_32.dll"
+windows.template_release.arm64 = "windows/GPUStableFluids2D.windows.template_release.arm64.dll"
+
+linux.editor.x86_64 = "linux/libGPUStableFluids2D.linux.editor.x86_64.so"
+linux.template_debug.x86_64 = "linux/libGPUStableFluids2D.linux.template_debug.x86_64.so"
+linux.template_debug.x86_32 = "linux/libGPUStableFluids2D.linux.template_debug.x86_32.so"
+linux.template_debug.arm64  = "linux/libGPUStableFluids2D.linux.template_debug.arm64.so"
+linux.template_debug.arm32  = "linux/libGPUStableFluids2D.linux.template_debug.arm32.so"
+linux.template_release.x86_64 = "linux/libGPUStableFluids2D.linux.template_release.x86_64.so"
+linux.template_release.x86_32 = "linux/libGPUStableFluids2D.linux.template_release.x86_32.so"
+linux.template_release.arm64  = "linux/libGPUStableFluids2D.linux.template_release.arm64.so"
+linux.template_release.arm32  = "linux/libGPUStableFluids2D.linux.template_release.arm32.so"
+
+macos.editor = "macos/libGPUStableFluids2D.macos.editor.dylib"
+macos.template_debug = "macos/libGPUStableFluids2D.macos.template_debug.dylib"
+macos.template_release = "macos/libGPUStableFluids2D.macos.template_release.dylib"
+
+android.template_debug.arm64   = "android/libGPUStableFluids2D.android.template_debug.arm64.so"
+android.template_debug.arm32   = "android/libGPUStableFluids2D.android.template_debug.arm32.so"
+android.template_debug.x86_64  = "android/libGPUStableFluids2D.android.template_debug.x86_64.so"
+android.template_debug.x86_32  = "android/libGPUStableFluids2D.android.template_debug.x86_32.so"
+android.template_release.arm64  = "android/libGPUStableFluids2D.android.template_release.arm64.so"
+android.template_release.arm32  = "android/libGPUStableFluids2D.android.template_release.arm32.so"
+android.template_release.x86_64 = "android/libGPUStableFluids2D.android.template_release.x86_64.so"
+android.template_release.x86_32 = "android/libGPUStableFluids2D.android.template_release.x86_32.so"
+
+ios.template_debug.arm64   = "ios/libGPUStableFluids2D.ios.template_debug.arm64.dylib"
+ios.template_release.arm64 = "ios/libGPUStableFluids2D.ios.template_release.arm64.dylib"
+
+web.template_debug.wasm32   = "web/libGPUStableFluids2D.web.template_debug.wasm32.wasm"
+web.template_release.wasm32 = "web/libGPUStableFluids2D.web.template_release.wasm32.wasm"

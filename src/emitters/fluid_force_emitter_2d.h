@@ -30,7 +30,7 @@ public:
 	void set_force_preset(int v);       int get_force_preset() const;
 	void set_lifetime(float v);         float get_lifetime() const;
 	void set_auto_destroy(bool v);      bool is_auto_destroy() const;
-	void set_sim_target_path(const NodePath &v); NodePath get_sim_target_path() const;
+	void set_sim_target(const NodePath &v); NodePath get_sim_target() const;
 
 	void _ready() override;
 	void _process(double p_delta) override;
@@ -50,7 +50,7 @@ private:
 	ForcePreset _force_preset = ForcePreset::Custom;
 	float _lifetime = 0.0f;
 	bool _auto_destroy = false;
-	NodePath _sim_target_path;
+	NodePath _sim_target;
 	float _life_timer = 0.0f;
 
 	GPUStableFluids2D *_find_sim() const;

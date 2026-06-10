@@ -10,9 +10,9 @@
 namespace godot {
 
 void FluidMouseInteractor2D::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_sim_target_path", "path"), &FluidMouseInteractor2D::set_sim_target_path);
-	ClassDB::bind_method(D_METHOD("get_sim_target_path"), &FluidMouseInteractor2D::get_sim_target_path);
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "sim_target_path"), "set_sim_target_path", "get_sim_target_path");
+	ClassDB::bind_method(D_METHOD("set_sim_target", "path"), &FluidMouseInteractor2D::set_sim_target);
+	ClassDB::bind_method(D_METHOD("get_sim_target"), &FluidMouseInteractor2D::get_sim_target);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sim_target", PROPERTY_HINT_NODE_TYPE, "GPUStableFluids2D"), "set_sim_target", "get_sim_target");
 
 	ClassDB::bind_method(D_METHOD("set_mouse_button", "button"), &FluidMouseInteractor2D::set_mouse_button);
 	ClassDB::bind_method(D_METHOD("get_mouse_button"), &FluidMouseInteractor2D::get_mouse_button);
@@ -40,8 +40,8 @@ void FluidMouseInteractor2D::_bind_methods() {
 		"set_interaction_mode", "get_interaction_mode");
 }
 
-void FluidMouseInteractor2D::set_sim_target_path(const NodePath &p) { _sim_target_path = p; }
-NodePath FluidMouseInteractor2D::get_sim_target_path() const { return _sim_target_path; }
+void FluidMouseInteractor2D::set_sim_target(const NodePath &p) { _sim_target = p; }
+NodePath FluidMouseInteractor2D::get_sim_target() const { return _sim_target; }
 void FluidMouseInteractor2D::set_mouse_button(int b) { _mouse_button = b; }
 int FluidMouseInteractor2D::get_mouse_button() const { return _mouse_button; }
 void FluidMouseInteractor2D::set_draw_color(const Color &c) { _draw_color = c; }
@@ -56,8 +56,8 @@ void FluidMouseInteractor2D::set_interaction_mode(int m) { _interaction_mode = (
 int FluidMouseInteractor2D::get_interaction_mode() const { return (int)_interaction_mode; }
 
 GPUStableFluids2D *FluidMouseInteractor2D::_find_sim() const {
-	if (!_sim_target_path.is_empty()) {
-		Node *n = get_node_or_null(_sim_target_path);
+	if (!_sim_target.is_empty()) {
+		Node *n = get_node_or_null(_sim_target);
 		if (n) return Object::cast_to<GPUStableFluids2D>(n);
 	}
 	// Fall back to parent
@@ -124,5 +124,4 @@ void FluidMouseInteractor2D::_process(double p_delta) {
 	_prev_mouse_pos = world_pos;
 	_was_pressed = pressed;
 }
-
 } // namespace godot

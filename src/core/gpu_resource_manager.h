@@ -92,7 +92,10 @@ public:
 	RID tex_color;
 	RID tex_divergence;
 	RID tex_temp;       // Ping-pong swap buffer
-	RID tex_display;    // Display-only (no STORAGE_BIT → SHADER_READ_ONLY_OPTIMAL layout)
+	RID tex_display;            // Display-only color/density (SHADER_READ_ONLY_OPTIMAL)
+	RID tex_display_velocity;   // Display-only velocity field
+	RID tex_display_pressure;   // Display-only pressure field
+	RID tex_display_divergence; // Display-only divergence field
 
 	// Obstacle textures
 	RID tex_obstacle;

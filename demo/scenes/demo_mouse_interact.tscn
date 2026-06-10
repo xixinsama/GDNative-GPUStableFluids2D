@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://demomouse001"]
+
+[ext_resource type="Script" uid="uid://dfr2hxwfc7fne" path="res://demo_mouse_interact.gd" id="1_ctrl"]
+
+[node name="MouseInteractDemo" type="Node2D" unique_id=2057146803]
+script = ExtResource("1_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1814684236]
+
+[node name="InfoPanel" type="Panel" parent="UI" unique_id=1908602202]
+custom_minimum_size = Vector2(420, 200)
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 430.0
+offset_bottom = 210.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/InfoPanel" unique_id=147437931]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=827940590]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "FluidMouseInteractor2D"
+
+[node name="StatusLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=1441518338]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+text = "模式: --"
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=1809691988]
+fluid_world_size = Vector2(800, 600)
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=16999428]
+sim_target_path = NodePath("..")
+draw_color = Color(0.3, 1, 1, 0.8)
+brush_size = 10.0
+velocity_scale = 0.25
+interaction_mode = 3
+
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="." unique_id=595123868]
+sim_source_path = NodePath("../GPUStableFluids2D")
+position = Vector2(-400, -300)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=452779822]

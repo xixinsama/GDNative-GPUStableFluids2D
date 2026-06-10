@@ -18,8 +18,8 @@ public:
 	FluidMouseInteractor2D() = default;
 	~FluidMouseInteractor2D() override = default;
 
-	void set_sim_target_path(const NodePath &p_path);
-	NodePath get_sim_target_path() const;
+	void set_sim_target(const NodePath &p_path);
+	NodePath get_sim_target() const;
 
 	void set_mouse_button(int p_button);
 	int get_mouse_button() const;
@@ -46,7 +46,7 @@ protected:
 	static void _bind_methods();
 
 private:
-	NodePath _sim_target_path;
+	NodePath _sim_target;
 	int _mouse_button     = 1; // MOUSE_BUTTON_LEFT
 	Color _draw_color     = Color(1, 1, 1, 1);
 	float _brush_size     = 5.0f;

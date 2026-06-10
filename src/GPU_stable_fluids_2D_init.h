@@ -5,6 +5,7 @@
 #include "godot_cpp/classes/texture2drd.hpp"
 #include "godot_cpp/variant/color.hpp"
 #include "godot_cpp/variant/rid.hpp"
+#include "godot_cpp/variant/packed_string_array.hpp"
 
 #include "core/sim_params.h"
 #include "core/fluid_types.h"
@@ -99,6 +100,9 @@ public:
 	void reset();
 
 	Ref<Texture2DRD> get_output_texture() const;
+	Ref<Texture2DRD> get_velocity_texture() const;
+	Ref<Texture2DRD> get_pressure_texture() const;
+	Ref<Texture2DRD> get_divergence_texture() const;
 	Vector2          world_to_fluid_pos(Vector2 p_world_pos) const;
 	Vector2          sample_velocity(Vector2 p_world_pos) const;
 	Vector2          get_domain_offset() const;
@@ -108,6 +112,8 @@ public:
 
 	void _ready() override;
 	void _process(double p_delta) override;
+
+	PackedStringArray _get_configuration_warnings() const;
 
 protected:
 	static void _bind_methods();
@@ -148,6 +154,9 @@ private:
 	FluidRenderPipeline _render_pipeline;
 	FluidObstacleDrawer _obstacle_drawer;
 	Ref<Texture2DRD>    _output_texture;
+	Ref<Texture2DRD>    _output_velocity_texture;
+	Ref<Texture2DRD>    _output_pressure_texture;
+	Ref<Texture2DRD>    _output_divergence_texture;
 
 	// ---- Domain following ----
 	Node2D *_follow_node = nullptr;

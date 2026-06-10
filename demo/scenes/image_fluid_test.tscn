@@ -1,0 +1,132 @@
+[gd_scene format=3 uid="uid://ddxbisovbnwvo"]
+
+[ext_resource type="Script" uid="uid://dne0368pvbxpa" path="res://perf_hud.gd" id="1_perf"]
+[ext_resource type="Script" uid="uid://cvu8xj67sxfqs" path="res://graph_drawer.gd" id="2_graph"]
+[ext_resource type="Script" uid="uid://bimgctrl00123" path="res://image_fluid_controller.gd" id="3_ctrl"]
+
+[node name="ImageFluidTest" type="Node2D" unique_id=874643916]
+script = ExtResource("3_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=271998953]
+
+[node name="PerfHUD" type="Control" parent="UI" unique_id=705748631]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_perf")
+
+[node name="Panel" type="Panel" parent="UI/PerfHUD" unique_id=1540990100]
+custom_minimum_size = Vector2(527, 300)
+layout_mode = 1
+offset_right = 527.0
+offset_bottom = 300.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/PerfHUD/Panel" unique_id=287559909]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FPSLabel" type="Label" parent="UI/PerfHUD/Panel/VBox" unique_id=1719263911]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "FPS: --"
+horizontal_alignment = 1
+
+[node name="FTLabel" type="Label" parent="UI/PerfHUD/Panel/VBox" unique_id=2115091984]
+layout_mode = 2
+text = "FT: -- ms"
+horizontal_alignment = 1
+
+[node name="GridLabel" type="Label" parent="UI/PerfHUD/Panel/VBox" unique_id=1480407170]
+layout_mode = 2
+text = "Grid: --"
+horizontal_alignment = 1
+
+[node name="DrawLabel" type="Label" parent="UI/PerfHUD/Panel/VBox" unique_id=1625831992]
+layout_mode = 2
+text = "Draw: --"
+horizontal_alignment = 1
+
+[node name="Graph" type="Control" parent="UI/PerfHUD/Panel/VBox" unique_id=1586710935]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_graph")
+
+[node name="HelpPanel" type="Control" parent="UI" unique_id=203394893]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="UI/HelpPanel" unique_id=2143778196]
+custom_minimum_size = Vector2(280, 180)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+grow_horizontal = 0
+
+[node name="VBox" type="VBoxContainer" parent="UI/HelpPanel/Panel" unique_id=1060404273]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -72.0
+offset_right = 120.0
+offset_bottom = 72.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI/HelpPanel/Panel/VBox" unique_id=815138490]
+layout_mode = 2
+text = "Image Fluid Test"
+
+[node name="H1" type="Label" parent="UI/HelpPanel/Panel/VBox" unique_id=935887932]
+layout_mode = 2
+text = "Mouse L: Disturb fluid"
+
+[node name="H2" type="Label" parent="UI/HelpPanel/Panel/VBox" unique_id=1736899990]
+layout_mode = 2
+text = "1/2/3/4: Draw/Push/Pull/Swirl"
+
+[node name="H3" type="Label" parent="UI/HelpPanel/Panel/VBox" unique_id=1917847997]
+layout_mode = 2
+text = "[/]: Brush size -/+"
+
+[node name="H4" type="Label" parent="UI/HelpPanel/Panel/VBox" unique_id=1396073021]
+layout_mode = 2
+text = "H: Help | R: Reset image"
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=12872175]
+width = 1024
+height = 1024
+timestep = 10.0
+diffusion = 0.01
+poisson_iterations = 25
+subtractive_mixing = true
+follow_mode = 1
+fluid_world_size = Vector2(800, 800)
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=1150482372]
+sim_target_path = NodePath("..")
+draw_color = Color(1, 1, 1, 0.8)
+brush_size = 6.0
+velocity_scale = 1.0
+
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="." unique_id=1947831588]
+sim_source_path = NodePath("../GPUStableFluids2D")
+display_mode = 1
+position = Vector2(-400, -400)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=186738721]

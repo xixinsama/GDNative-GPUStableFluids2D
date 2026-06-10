@@ -27,6 +27,11 @@ void FluidTileMapObstacle2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_terrain_set", "set"), &FluidTileMapObstacle2D::set_terrain_set);
 	ClassDB::bind_method(D_METHOD("get_terrain_set"), &FluidTileMapObstacle2D::get_terrain_set);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "terrain_set", PROPERTY_HINT_RANGE, "-1,31"), "set_terrain_set", "get_terrain_set");
+
+	ClassDB::bind_method(D_METHOD("set_sim_target", "target"), &FluidTileMapObstacle2D::set_sim_target);
+	ClassDB::bind_method(D_METHOD("get_sim_target"), &FluidTileMapObstacle2D::get_sim_target);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sim_target", PROPERTY_HINT_NODE_TYPE, "GPUStableFluids2D"),
+		"set_sim_target", "get_sim_target");
 }
 
 void FluidTileMapObstacle2D::set_tile_map_path(const NodePath &v) { _tile_map_path = v; }
@@ -39,6 +44,8 @@ void FluidTileMapObstacle2D::set_physics_layer_index(int v) { _physics_layer_ind
 int FluidTileMapObstacle2D::get_physics_layer_index() const { return _physics_layer_index; }
 void FluidTileMapObstacle2D::set_terrain_set(int v) { _terrain_set = v; }
 int FluidTileMapObstacle2D::get_terrain_set() const { return _terrain_set; }
+void FluidTileMapObstacle2D::set_sim_target(const NodePath &p) { _sim_target = p; }
+NodePath FluidTileMapObstacle2D::get_sim_target() const { return _sim_target; }
 
 void FluidTileMapObstacle2D::_ready() {
 	if (Engine::get_singleton()->is_editor_hint()) return;
@@ -51,5 +58,4 @@ void FluidTileMapObstacle2D::_rasterize_tile_map() {
 	// Full implementation would iterate tile cells and write to obstacle buffer
 	// For now, the node itself acts as a marker in the "fluid_obstacles" group
 }
-
 } // namespace godot

@@ -22,8 +22,8 @@ public:
 	FluidLightOccluder2D();
 	~FluidLightOccluder2D() override;
 
-	void set_sim_source_path(const NodePath &p_path);
-	NodePath get_sim_source_path() const;
+	void set_sim_target(const NodePath &p_path);
+	NodePath get_sim_target() const;
 
 	void set_density_threshold(float p_t);
 	float get_density_threshold() const;
@@ -50,7 +50,7 @@ protected:
 	static void _bind_methods();
 
 private:
-	NodePath _sim_source_path;
+	NodePath _sim_target;
 	float _density_threshold = 0.1f;
 	int _max_contours = 8;
 	int _update_frequency = 15;

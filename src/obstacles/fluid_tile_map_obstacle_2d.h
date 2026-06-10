@@ -31,6 +31,9 @@ public:
 	void set_terrain_set(int p_set);
 	int get_terrain_set() const;
 
+	void set_sim_target(const NodePath &p_path);
+	NodePath get_sim_target() const;
+
 	void _ready() override;
 
 protected:
@@ -42,6 +45,7 @@ private:
 	TileFillMode _fill_mode = TileFillMode::Opaque;
 	int _physics_layer_index = 0;
 	int _terrain_set = -1;
+	NodePath _sim_target;
 
 	void _rasterize_tile_map();
 };

@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://demodisplay01"]
+
+[ext_resource type="Script" uid="uid://bppu0fv04ti6g" path="res://demo_display_modes.gd" id="1_ctrl"]
+
+[node name="DisplayModesDemo" type="Node2D" unique_id=1355149782]
+script = ExtResource("1_ctrl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=30929330]
+
+[node name="InfoPanel" type="Panel" parent="UI" unique_id=498096029]
+custom_minimum_size = Vector2(440, 160)
+offset_right = 440.0
+offset_bottom = 160.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/InfoPanel" unique_id=2088229335]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=1747234388]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "FluidDisplay2D"
+horizontal_alignment = 2
+
+[node name="StatusLabel" type="Label" parent="UI/InfoPanel/VBox" unique_id=1194764954]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
+horizontal_alignment = 2
+
+[node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=1310729612]
+fluid_world_size = Vector2(800, 600)
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=1892441926]
+sim_target_path = NodePath("..")
+draw_color = Color(1, 0.5, 0.1, 0.8)
+brush_size = 10.0
+velocity_scale = 0.3
+
+[node name="DisplayA" type="FluidDisplay2D" parent="." unique_id=937939141]
+sim_source_path = NodePath("../GPUStableFluids2D")
+
+[node name="DisplayB" type="FluidDisplay2D" parent="." unique_id=1375572553]
+sim_source_path = NodePath("../GPUStableFluids2D")
+display_mode = 1
+
+[node name="Emitter" type="FluidEmitter2D" parent="." unique_id=1963071250]
+emission_preset = 3
+emit_color = Color(0.5, 0.5, 0.5, 0.6)
+color_radius = 3.0
+velocity_radius = 2.0
+emit_interval = 0.06
+swirl_strength = 0.4
+sim_target_path = NodePath("../GPUStableFluids2D")
+position = Vector2(0, -200)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=137732403]

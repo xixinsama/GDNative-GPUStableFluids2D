@@ -33,7 +33,7 @@ GDNative-GPUStableFluids2D/
 │       ├── draw_request.h                 # DrawRequest + BatchPoint (48B std430) structs
 │       ├── fluid_coord_utils.h
 │       └── polygon_rasterizer.h
-├── project/                      # Godot demo project
+├── demo/                      # Godot demo project
 │   ├── project.godot            # Godot 4.6 project config
 │   ├── demo_main.tscn           # Demo scene
 │   ├── demo_controller.gd       # Keyboard shortcuts, emitter presets
@@ -54,7 +54,7 @@ GDNative-GPUStableFluids2D/
 scons target=editor -j4           # Editor build
 scons target=template_debug -j4   # Debug build
 
-# Output goes to bin/windows/ and project/bin/windows/
+# Output goes to bin/windows/ and demo/bin/windows/
 ```
 
 Build system: **SCons** (reads `SConstruct` + `godot-cpp/SConstruct`).

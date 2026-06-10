@@ -2,7 +2,10 @@
 
 #include "godot_cpp/classes/node2d.hpp"
 #include "godot_cpp/variant/vector2.hpp"
+#include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/variant/color.hpp"
 #include "godot_cpp/classes/texture2d.hpp"
+#include "godot_cpp/classes/shape2d.hpp"
 
 namespace godot {
 
@@ -15,7 +18,8 @@ public:
 	virtual Vector2 get_object_center()           const = 0;
 };
 
-// Generic fluid obstacle node.
+// Fluid obstacle node — similar to CollisionShape2D for PhysicsBody2D.
+// Defines a rigid barrier that fluid cannot enter.  Moving obstacles push fluid.
 // Place as child of a RigidBody2D / CharacterBody2D or standalone with manual velocity.
 // Auto-detected by FluidObstacleDrawer via the "fluid_obstacles" group.
 class FluidObstacle2D : public Node2D, public IFluidObstacle {
@@ -37,6 +41,18 @@ public:
 	void set_obstacle_texture(const Ref<Texture2D> &p_tex);
 	Ref<Texture2D> get_obstacle_texture() const;
 
+	void set_sim_target(const NodePath &p_path);
+	NodePath get_sim_target() const;
+
+	void set_shape(const Ref<Shape2D> &p_shape);
+	Ref<Shape2D> get_shape() const;
+
+	void set_one_way_collision(bool p_enable);
+	bool is_one_way_collision() const;
+
+	void set_debug_color(const Color &p_color);
+	Color get_debug_color() const;
+
 	// IFluidObstacle interface
 	Vector2 get_object_linear_velocity()  const override;
 	float   get_object_angular_velocity() const override;
@@ -53,6 +69,10 @@ private:
 	Vector2 _velocity;
 	float _angular_velocity = 0.0f;
 	Ref<Texture2D> _obstacle_texture;
+	NodePath _sim_target;
+	Ref<Shape2D> _shape;
+	bool _one_way_collision = false;
+	Color _debug_color = Color(1.0f, 0.2f, 0.2f, 0.4f);
 
 	Vector2 _cached_lin_vel;
 	float   _cached_ang_vel;

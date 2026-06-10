@@ -1,6 +1,7 @@
 #include "GPU_stable_fluids_2D_init.h"
 
 #include "core/fluid_debug_config.h"
+#include "display/fluid_display_2d.h"
 #include "godot_cpp/classes/camera2d.hpp"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/rendering_server.hpp"
@@ -117,9 +118,14 @@ void GPUStableFluids2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("clear_draw_requests"), &GPUStableFluids2D::clear_draw_requests);
 	ClassDB::bind_method(D_METHOD("reset"), &GPUStableFluids2D::reset);
 	ClassDB::bind_method(D_METHOD("get_output_texture"), &GPUStableFluids2D::get_output_texture);
+	ClassDB::bind_method(D_METHOD("get_velocity_texture"), &GPUStableFluids2D::get_velocity_texture);
+	ClassDB::bind_method(D_METHOD("get_pressure_texture"), &GPUStableFluids2D::get_pressure_texture);
+	ClassDB::bind_method(D_METHOD("get_divergence_texture"), &GPUStableFluids2D::get_divergence_texture);
 	ClassDB::bind_method(D_METHOD("world_to_fluid_pos", "world_pos"), &GPUStableFluids2D::world_to_fluid_pos);
 	ClassDB::bind_method(D_METHOD("sample_velocity", "world_pos"), &GPUStableFluids2D::sample_velocity);
 	ClassDB::bind_method(D_METHOD("get_domain_offset"), &GPUStableFluids2D::get_domain_offset);
+
+	ClassDB::bind_method(D_METHOD("_get_configuration_warnings"), &GPUStableFluids2D::_get_configuration_warnings);
 
 	ADD_SIGNAL(MethodInfo("simulation_initialized"));
 	ADD_SIGNAL(MethodInfo("simulation_reset"));
@@ -189,6 +195,20 @@ void GPUStableFluids2D::_ready() {
 
 	_initialise_gpu();
 	add_to_group("fluid_sim_nodes");
+}
+
+PackedStringArray GPUStableFluids2D::_get_configuration_warnings() const {
+	// Check for FluidDisplay2D child node — required to render the simulation output.
+	// Mirrors the pattern used by PhysicsBody2D → CollisionShape2D.
+	TypedArray<Node> children = get_children();
+	for (int i = 0; i < children.size(); i++) {
+		if (Object::cast_to<FluidDisplay2D>(children[i])) {
+			return PackedStringArray(); // Display child found — no warning.
+		}
+	}
+	PackedStringArray warnings;
+	warnings.append(String("This node has no FluidDisplay2D child, so the fluid simulation output will not be visible.\nAdd a FluidDisplay2D child node to display the fluid."));
+	return warnings;
 }
 
 void GPUStableFluids2D::_process(double p_delta) {
@@ -316,12 +336,26 @@ void GPUStableFluids2D::_gpu_process_on_render_thread(double p_delta, Vector2 do
 		Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
 		0, 0, 0, 0);
 
-	// Computation complete — clear this frame's draw requests
-	_draw_request_count = 0;
-	if (_frame_count == 0) {
-		FLUID_PRINT("[GPUStableFluids2D] _gpu_process_on_render_thread() first frame DONE");
-	}
-	_frame_count++;
+		// Copy internal fields to display textures for alternative visualization modes.
+		rd->texture_copy(
+			_gpu_resources.tex_velocity, _gpu_resources.tex_display_velocity,
+			Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
+			0, 0, 0, 0);
+		rd->texture_copy(
+			_gpu_resources.tex_pressure, _gpu_resources.tex_display_pressure,
+			Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
+			0, 0, 0, 0);
+		rd->texture_copy(
+			_gpu_resources.tex_divergence, _gpu_resources.tex_display_divergence,
+			Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3((float)width, (float)height, 1),
+			0, 0, 0, 0);
+
+		// Computation complete -- clear this frame's draw requests
+		_draw_request_count = 0;
+		if (_frame_count == 0) {
+			FLUID_PRINT('[GPUStableFluids2D] _gpu_process_on_render_thread() first frame DONE');
+		}
+		_frame_count++;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -426,6 +460,15 @@ void GPUStableFluids2D::_initialise_gpu() {
 	_output_texture.instantiate();
 	_output_texture->set_texture_rd_rid(_gpu_resources.tex_display);
 
+	_output_velocity_texture.instantiate();
+	_output_velocity_texture->set_texture_rd_rid(_gpu_resources.tex_display_velocity);
+
+	_output_pressure_texture.instantiate();
+	_output_pressure_texture->set_texture_rd_rid(_gpu_resources.tex_display_pressure);
+
+	_output_divergence_texture.instantiate();
+	_output_divergence_texture->set_texture_rd_rid(_gpu_resources.tex_display_divergence);
+
 	_obstacle_drawer.initialize(this);
 
 	// Defer initial texture clear to the render thread.
@@ -474,6 +517,18 @@ void GPUStableFluids2D::reset() {
 
 Ref<Texture2DRD> GPUStableFluids2D::get_output_texture() const {
 	return _output_texture;
+}
+
+Ref<Texture2DRD> GPUStableFluids2D::get_velocity_texture() const {
+	return _output_velocity_texture;
+}
+
+Ref<Texture2DRD> GPUStableFluids2D::get_pressure_texture() const {
+	return _output_pressure_texture;
+}
+
+Ref<Texture2DRD> GPUStableFluids2D::get_divergence_texture() const {
+	return _output_divergence_texture;
 }
 
 Vector2 GPUStableFluids2D::world_to_fluid_pos(Vector2 p_world_pos) const {
