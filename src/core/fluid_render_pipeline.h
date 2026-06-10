@@ -49,6 +49,8 @@ private:
 	void _step_splat_batch(int point_count, float p_dt);
 	void _step_obstacle_force(float dt, float strength);
 	void _step_copy_obstacle();
+	void _step_color_decay(float longevity, float decay);
+	void _step_apply_force_emitters(float dt);
 
 	GPUResourceManager *_gpu = nullptr;
 	int _x_groups = 0, _y_groups = 0;

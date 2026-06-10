@@ -125,8 +125,6 @@ void GPUStableFluids2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("sample_velocity", "world_pos"), &GPUStableFluids2D::sample_velocity);
 	ClassDB::bind_method(D_METHOD("get_domain_offset"), &GPUStableFluids2D::get_domain_offset);
 
-	ClassDB::bind_method(D_METHOD("_get_configuration_warnings"), &GPUStableFluids2D::_get_configuration_warnings);
-
 	ADD_SIGNAL(MethodInfo("simulation_initialized"));
 	ADD_SIGNAL(MethodInfo("simulation_reset"));
 	ADD_SIGNAL(MethodInfo("obstacle_changed"));
@@ -195,6 +193,19 @@ void GPUStableFluids2D::_ready() {
 
 	_initialise_gpu();
 	add_to_group("fluid_sim_nodes");
+
+	// Push output textures to any FluidDisplay2D children (GPU is ready now)
+	_bind_display_children();
+}
+
+void GPUStableFluids2D::_bind_display_children() {
+	TypedArray<Node> children = get_children();
+	for (int i = 0; i < children.size(); i++) {
+		FluidDisplay2D *disp = Object::cast_to<FluidDisplay2D>(children[i]);
+		if (disp) {
+			disp->bind_to_sim(this);
+		}
+	}
 }
 
 PackedStringArray GPUStableFluids2D::_get_configuration_warnings() const {
@@ -214,6 +225,9 @@ PackedStringArray GPUStableFluids2D::_get_configuration_warnings() const {
 void GPUStableFluids2D::_process(double p_delta) {
 	if (Engine::get_singleton()->is_editor_hint()) return;
 	if (!_initialized) return;
+
+		// Bind any FluidDisplay2D children that appeared after GPU init
+		_bind_display_children();
 
 	if (_needs_recreate) {
 		_recreate_gpu_resources();
@@ -445,6 +459,8 @@ void GPUStableFluids2D::_initialise_gpu() {
 	check_pipeline(_gpu_resources.obstacle_force_pipeline, "obstacle_force");
 	check_pipeline(_gpu_resources.shift_texture_pipeline, "shift_texture");
 	check_pipeline(_gpu_resources.copy_texture_pipeline, "copy_texture");
+	check_pipeline(_gpu_resources.color_decay_pipeline, "color_decay");
+	check_pipeline(_gpu_resources.apply_force_emitter_pipeline, "apply_force_emitter");
 
 	if (!all_ok) {
 		FLUID_PRINTERR("[GPUStableFluids2D] ERROR: Some GPU pipelines failed to load. Simulation will be disabled.");

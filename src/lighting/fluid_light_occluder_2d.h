@@ -2,6 +2,7 @@
 
 #include "godot_cpp/classes/node2d.hpp"
 #include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/variant/packed_vector2_array.hpp"
 #include "godot_cpp/variant/packed_byte_array.hpp"
 
@@ -22,8 +23,8 @@ public:
 	FluidLightOccluder2D();
 	~FluidLightOccluder2D() override;
 
-	void set_sim_target(const NodePath &p_path);
-	NodePath get_sim_target() const;
+	void set_sim_target(Object *p_obj);
+	Object *get_sim_target() const;
 
 	void set_density_threshold(float p_t);
 	float get_density_threshold() const;

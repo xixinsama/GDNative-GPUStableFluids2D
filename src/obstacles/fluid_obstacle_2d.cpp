@@ -51,8 +51,22 @@ void FluidObstacle2D::set_angular_velocity(float v) { _angular_velocity = v; }
 float FluidObstacle2D::get_angular_velocity() const { return _angular_velocity; }
 void FluidObstacle2D::set_obstacle_texture(const Ref<Texture2D> &t) { _obstacle_texture = t; }
 Ref<Texture2D> FluidObstacle2D::get_obstacle_texture() const { return _obstacle_texture; }
-void FluidObstacle2D::set_sim_target(const NodePath &p) { _sim_target = p; }
-NodePath FluidObstacle2D::get_sim_target() const { return _sim_target; }
+void FluidObstacle2D::set_sim_target(Object *p_obj) {
+	if (p_obj) {
+		Node *node = Object::cast_to<Node>(p_obj);
+		if (node) {
+			_sim_target = get_path_to(node);
+		} else {
+			_sim_target = NodePath();
+		}
+	} else {
+		_sim_target = NodePath();
+	}
+}
+Object *FluidObstacle2D::get_sim_target() const {
+	if (_sim_target.is_empty()) return nullptr;
+	return get_node_or_null(_sim_target);
+}
 void FluidObstacle2D::set_shape(const Ref<Shape2D> &s) { _shape = s; }
 Ref<Shape2D> FluidObstacle2D::get_shape() const { return _shape; }
 void FluidObstacle2D::set_one_way_collision(bool v) { _one_way_collision = v; }

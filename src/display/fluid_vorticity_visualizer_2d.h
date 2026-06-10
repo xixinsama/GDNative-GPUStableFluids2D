@@ -2,6 +2,7 @@
 
 #include "godot_cpp/classes/sprite2d.hpp"
 #include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/classes/object.hpp"
 
 #include "core/fluid_types.h"
 
@@ -17,7 +18,8 @@ public:
 	FluidVorticityVisualizer2D();
 	~FluidVorticityVisualizer2D() override = default;
 
-	void set_sim_target(const NodePath &v); NodePath get_sim_target() const;
+	void set_sim_target(Object *p_obj);
+	Object *get_sim_target() const;
 	void set_display_mode(int v); int get_display_mode() const;
 	void set_auto_update(bool v); bool is_auto_update() const;
 

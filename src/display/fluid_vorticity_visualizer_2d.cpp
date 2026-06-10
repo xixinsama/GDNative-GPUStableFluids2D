@@ -28,8 +28,22 @@ void FluidVorticityVisualizer2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_update"), "set_auto_update", "is_auto_update");
 }
 
-void FluidVorticityVisualizer2D::set_sim_target(const NodePath &v) { _sim_target = v; }
-NodePath FluidVorticityVisualizer2D::get_sim_target() const { return _sim_target; }
+void FluidVorticityVisualizer2D::set_sim_target(Object *p_obj) {
+	if (p_obj) {
+		Node *node = Object::cast_to<Node>(p_obj);
+		if (node) {
+			_sim_target = get_path_to(node);
+		} else {
+			_sim_target = NodePath();
+		}
+	} else {
+		_sim_target = NodePath();
+	}
+}
+Object *FluidVorticityVisualizer2D::get_sim_target() const {
+	if (_sim_target.is_empty()) return nullptr;
+	return get_node_or_null(_sim_target);
+}
 void FluidVorticityVisualizer2D::set_display_mode(int v) { _display_mode = (DisplayMode)v; }
 int FluidVorticityVisualizer2D::get_display_mode() const { return (int)_display_mode; }
 void FluidVorticityVisualizer2D::set_auto_update(bool v) { _auto_update = v; }
@@ -82,7 +96,12 @@ void FluidVorticityVisualizer2D::_process(double p_delta) {
 	if (tex.is_valid()) {
 		tex->set_texture_rd_rid(out_tex->get_texture_rd_rid());
 	} else {
-		set_texture(out_tex);
+		// Create an independent Texture2DRD wrapper — do NOT share the
+		// sim's object, otherwise switching mode here affects FluidDisplay2D.
+		Ref<Texture2DRD> own;
+		own.instantiate();
+		own->set_texture_rd_rid(out_tex->get_texture_rd_rid());
+		set_texture(own);
 	}
 }
 

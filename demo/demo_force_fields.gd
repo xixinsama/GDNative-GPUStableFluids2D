@@ -19,7 +19,7 @@ func _ready():
 	for i in range(5):
 		var fe := FluidForceEmitter2D.new()
 		fe.set_force_preset(i + 1) # Wind=1, Gravity=2, Vortex=3, Explosion=4, Magnet=5
-		fe.set_sim_target(NodePath("../GPUStableFluids2D"))
+		fe.sim_target = $"../GPUStableFluids2D"
 		fe.set_active(true)
 		fe.position = positions[i]
 		fe.name = "Force" + str(i)

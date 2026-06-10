@@ -122,6 +122,7 @@ private:
 	void _initialise_gpu();
 	void _recreate_gpu_resources();
 	void _upload_batch_data();
+	void _bind_display_children();
 	void _gpu_process_on_render_thread(double p_delta, Vector2 p_domain_offset);
 	void _deferred_clear_textures(const Color &p_color);
 
@@ -133,10 +134,10 @@ private:
 	float viscosity       = 0.0f;
 	float diffusion       = 0.0f;
 	int   poisson_iterations = 40;
-	float ink_longevity   = 0.995f;
+	float ink_longevity   = 1.0f;
 	Color ink_color       = Color(1, 1, 1, 1);
 	Color clear_color     = Color(0, 0, 0, 0);
-	float color_decay     = 0.0005f;
+	float color_decay     = 0.0f;
 	float velocity_decay  = -1.0f;
 	bool  vorticity_enabled = true;
 	float vorticity_scale = 0.4f;

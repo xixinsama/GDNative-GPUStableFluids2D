@@ -101,7 +101,7 @@ func _ensure_emitter() -> FluidEmitter2D:
 	if has_node("PresetEmitter"):
 		return $PresetEmitter as FluidEmitter2D
 	var e := FluidEmitter2D.new()
-	e.set_sim_target(NodePath("../GPUStableFluids2D"))
+	e.sim_target = $"../GPUStableFluids2D"
 	e.position = Vector2(0, -200)
 	e.name = "PresetEmitter"
 	add_child(e)

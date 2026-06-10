@@ -20,14 +20,26 @@ layout(push_constant, std430) uniform Params {
     float rdx;
 } params;
 
+// Below this velocity magnitude, skip advection entirely.
+// Prevents numerical noise in stationary fluid from causing
+// progressive smearing at the grid scale.
+const float VEL_EPSILON = 1e-5;
+
 void main() {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
     if (pixel.x >= int(params.resolution.x) || pixel.y >= int(params.resolution.y)) return;
 
-    // Backtrace: uv - velocity * dt / resolution
+    // Backtrace: uv - velocity * dt / grid_size
     vec2 uv = (vec2(pixel) + 0.5) / params.resolution;
-    // Use texelFetch for exact pixel read (equivalent to old imageLoad)
     vec2 vel = texelFetch(velocity_field, pixel, 0).xy;
+
+    // Skip advection for near-zero velocity — avoids unnecessary
+    // bilinear interpolation (low-pass filter) on stationary regions.
+    if (abs(vel.x) < VEL_EPSILON && abs(vel.y) < VEL_EPSILON) {
+        imageStore(output_field, pixel, texelFetch(input_field, pixel, 0));
+        return;
+    }
+
     vec2 prev_uv = uv - vel * params.dt / params.resolution;
     prev_uv = clamp(prev_uv, 0.0, 1.0);
 

@@ -1,10 +1,94 @@
 # Problems & Bugs — GPUStableFluids2D
 
-> 最后更新: 2026-06-10
+> 最后更新: 2026-06-10 (晚)
 
 ---
 
-## 🐛 Bug: 静置流体逐渐产生毛边 (Static Fluid Fringing)
+## 🐛 新发现 Bug: display_mode 交叉污染 (2026-06-10 晚)
+
+### 现象
+FluidDisplay2D 和 FluidVorticityVisualizer2D 中任意一个切换 `display_mode`，另一个的显示也会跟着变，且切换后无法再变回 Density 模式。
+
+### 根因
+两个显示节点共享了 `GPUStableFluids2D` 的同一个 `Texture2DRD` 对象。`get_output_texture()`、`get_velocity_texture()` 等方法返回的是 GPUStableFluids2D 内部的 `Ref<Texture2DRD>` 成员（`_output_texture`、`_output_velocity_texture` 等）。当显示节点调用 `tex->set_texture_rd_rid(...)` 切换显示模式时，它修改的是共享的 Texture2DRD 对象的 RID，影响所有持有该对象的节点。
+
+### 修复 (2026-06-10 晚)
+每个显示节点在首次获取纹理时创建自己独立的 `Texture2DRD` 包装器：
+```cpp
+Ref<Texture2DRD> own;
+own.instantiate();
+own->set_texture_rd_rid(sim->get_output_texture()->get_texture_rd_rid());
+set_texture(own);
+```
+- `fluid_display_2d.cpp`: `bind_to_sim()` 中创建独立 Texture2DRD
+- `fluid_vorticity_visualizer_2d.cpp`: `_process()` 首次分支中创建独立 Texture2DRD
+
+---
+
+## 🐛 新发现: 默认 decay 值过激导致模拟紊乱 (2026-06-10 晚)
+
+### 现象
+修复毛边问题后，稍加扰动流体就迅速紊乱。原因为 `ink_longevity=0.995`（每帧乘性衰减）和 `color_decay=0.0005`（每帧减性衰减）的默认值对视觉影响过大。
+
+### 修复 (2026-06-10 晚)
+将默认值改为中性值，decay 变为 opt-in：
+- `ink_longevity`: `0.995` → `1.0`（无乘性衰减）
+- `color_decay`: `0.0005` → `0.0`（无减性衰减）
+- 用户如需启用衰减效果，在编辑器中手动调整这两个属性
+
+---
+
+## ⚠️ 待解决: FluidMouseInteractor2D 缺少信号设计
+
+当前 `FluidMouseInteractor2D` 没有导出任何信号。应该补充：
+- `interaction_started()` — 鼠标按下开始交互时触发
+- `interaction_ended()` — 鼠标释放时触发
+- `interaction_point(Vector2 world_pos)` — 每次绘制/推动/拉动/旋转时触发，携带世界坐标
+
+---
+
+## 📊 问题按严重程度排序
+
+| 优先级 | 问题 | 影响 |
+|--------|------|------|
+| **P0** | 静置流体产生毛边 (数值扩散) | 核心视觉效果随时间劣化 |
+| **P0** | `show_debug_bounds` 编辑器中不生效 | 导出变量无功能实现 |
+| **P1** | `ink_longevity` / `color_decay` 死属性 | 颜色永不过期，噪声无限累积 |
+| **P1** | SimParams uniform buffer 未接入 | 参数传递碎片化 |
+| **P1** | 障碍物光栅化使用硬编码 32×32 矩形 | Shape2D 属性无法使用 |
+| **P1** | advect / jacobi 着色器不检查障碍物纹理 | 障碍物非真正的刚性屏障 |
+| **P1** | TileMap 障碍物光栅化函数体为空 | 功能完全不可用 |
+| **P2** | 光照系统仅占位矩形 | Marching Square 未集成 |
+| **P2** | 编辑器调试可视化需要 EditorPlugin | 无编辑器 gizmo |
+| **P2** | GPU 力发射器管线未集成 | force_emitter_buffer 已分配但未使用 |
+| **P2** | 涡度场无独立标量纹理 | Vorticity 模式回退到 Density |
+| **P3** | `_get_configuration_warnings` 需验证功能 | 已实现但需编辑器实测 |
+
+---
+
+## 🐛 P0: show_debug_bounds 编辑器中不生效
+
+### 现象
+`FluidDisplay2D` 导出变量 `show_debug_bounds` 默认为 `true`，但在 Godot 编辑器的 2D 视口中**没有任何矩形框显示**。
+
+### 根因
+`FluidDisplay2D::_process()` 在编辑器模式下直接 return：
+
+```cpp
+void FluidDisplay2D::_process(double p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) return;  // ← 直接跳过
+    _update_texture();
+}
+```
+
+即使不跳过，也无法在编辑器中绘制——Godot 4 GDExtension 的节点类**不能直接覆盖 `_draw()` 或 `NOTIFICATION_DRAW`**（这两个方法不是虚函数）。编辑器可视化必须通过单独的 `EditorPlugin` + `EditorNode2DGizmoPlugin` 模块实现。
+
+### 修复方案
+需要创建 `src/editor/` 目录，添加 `EditorPlugin` 子类，为 `FluidDisplay2D` 注册 gizmo 插件。Gizmo 的 `_redraw()` 中可以调用 `draw_rect()` 绘制流体域边界矩形框。
+
+---
+
+## 🐛 P0: 静置流体逐渐产生毛边 (Static Fluid Fringing)
 
 ### 现象
 流体注入后静置不动，随着时间推移，原本光滑的颜色/密度边界逐渐变得模糊并出现锯齿状"毛边"（grid-aliasing artifacts），类似低分辨率图像放大后的阶梯感。
@@ -150,16 +234,40 @@ vec4 result = texture(input_field, prev_uv);  // 双线性插值
 
 ---
 
-## 🔧 全局待改进项
+## 🔧 已修复 (变更记录)
 
-### NodePath → 直接类型引用
+### FluidDisplay2D 重新设计 — ✅ 2026-06-10
 
-**状态**: ✅ 已修复 (2026-06-10)
+- 移除 `sim_target` 导出变量 → 自动检测父节点 GPUStableFluids2D
+- 移除 `auto_size` 导出变量 → 始终根据 `fluid_world_size / resolution` 自动缩放
+- 新增 `show_debug_bounds` 导出变量 → 编辑器/运行时显示流体范围矩形框
+- 内部缓存父节点指针，避免每帧 NodePath 解析
 
-全部 8 个子节点的引用已统一为 `sim_target`，使用 `PROPERTY_HINT_NODE_TYPE` 限制为 GPUStableFluids2D。
+### FluidMouseInteractor2D 重新设计 — ✅ 2026-06-10
 
-### GPUStableFluids2D 配置警告
+- **核心修复**: `get_mouse_position()` → `get_global_mouse_position()`，修复鼠标绘制位置偏移 bug
+  - 旧代码手动套用 Camera2D 变换数学（错误）
+  - 新代码使用 CanvasItem 的内置方法自动处理所有视口/摄像机变换
+- 移除 `sim_target` 和 `continuous_draw` 导出 → 自动检测父节点
+- 速度计算除以 `p_delta` 获得正确的世界速度
+- `_has_prev_pos` 标志位替代 `Vector2(0,0)` 哨兵值
 
-**状态**: ✅ 已修复 (2026-06-10)
+### sim_target 属性迁移 — ✅ 2026-06-10
 
-`_get_configuration_warnings()` 已实现，当没有 FluidDisplay2D 子节点时显示警告。
+全部 8 个子节点的引用统一为 `sim_target`，setter 接受 `Object *`（编辑器显示 GPUStableFluids2D 节点选择器），内部存储 NodePath 保证序列化兼容。
+
+### GPUStableFluids2D 配置警告 — ✅ 2026-06-10
+
+`_get_configuration_warnings()` 已实现，当没有 FluidDisplay2D 子节点时显示编辑器警告。
+
+### display_mode 修复 — ✅ 2026-06-10
+
+FluidDisplay2D 的 5 种 display_mode 现在正确显示不同内部场纹理。
+
+### FluidVorticityVisualizer2D 实现 — ✅ 2026-06-10
+
+从空存根升级为继承 Sprite2D 的功能调试可视化器。
+
+### 障碍物着色器重写 — ✅ 2026-06-10
+
+`obstacle_force.glsl` 从力基改为刚性屏障逻辑（零速度 + 无滑移边界条件）。FluidObstacle2D 新增 `shape`、`one_way_collision`、`debug_color` 属性。

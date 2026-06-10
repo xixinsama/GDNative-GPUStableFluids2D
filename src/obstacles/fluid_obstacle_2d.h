@@ -3,6 +3,7 @@
 #include "godot_cpp/classes/node2d.hpp"
 #include "godot_cpp/variant/vector2.hpp"
 #include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/variant/color.hpp"
 #include "godot_cpp/classes/texture2d.hpp"
 #include "godot_cpp/classes/shape2d.hpp"
@@ -41,8 +42,8 @@ public:
 	void set_obstacle_texture(const Ref<Texture2D> &p_tex);
 	Ref<Texture2D> get_obstacle_texture() const;
 
-	void set_sim_target(const NodePath &p_path);
-	NodePath get_sim_target() const;
+	void set_sim_target(Object *p_obj);
+	Object *get_sim_target() const;
 
 	void set_shape(const Ref<Shape2D> &p_shape);
 	Ref<Shape2D> get_shape() const;

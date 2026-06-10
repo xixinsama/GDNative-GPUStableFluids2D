@@ -218,12 +218,14 @@ text = "H: Toggle panel | R: Reset"
 [node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=532233298]
 follow_path = NodePath("../Camera2D")
 
+[node name="FluidDisplay2D" type="FluidDisplay2D" parent="GPUStableFluids2D" unique_id=1830101929]
+show_debug_bounds = false
+visible = false
+
 [node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="GPUStableFluids2D" unique_id=1777825315]
 draw_color = Color(1, 1, 0.29803923, 1)
 brush_size = 6.0
 velocity_scale = 0.15
-
-[node name="FluidDisplay2D" type="FluidDisplay2D" parent="." unique_id=1830101929]
 
 [node name="SmokeEmitter" type="FluidEmitter2D" parent="." unique_id=1348674644]
 emission_preset = 3
@@ -280,4 +282,7 @@ shape = SubResource("circle")
 libraries/ = SubResource("AnimationLibrary_7b5ns")
 autoplay = &"new_animation"
 
-[node name="FluidVorticityVisualizer2D" type="FluidVorticityVisualizer2D" parent="." unique_id=1926900859]
+[node name="FluidVorticityVisualizer2D" type="FluidVorticityVisualizer2D" parent="." unique_id=1926900859 node_paths=PackedStringArray("sim_target")]
+sim_target = NodePath("../GPUStableFluids2D")
+display_mode = 2
+auto_update = false

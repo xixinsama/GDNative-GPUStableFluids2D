@@ -33,14 +33,18 @@ theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
 text = "FPS: --"
 
 [node name="GPUStableFluids2D" type="GPUStableFluids2D" parent="." unique_id=1152070389]
+timestep = 10.0
+ink_longevity = 1.0
 
 [node name="FluidDisplay2D" type="FluidDisplay2D" parent="GPUStableFluids2D" unique_id=1408715601]
-auto_size = false
-position = Vector2(-256, -256)
-
-[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="." unique_id=146403781]
-draw_color = Color(1, 0.6, 0.2, 0.8)
-brush_size = 8.0
-velocity_scale = 0.2
+position = Vector2(-720, -360)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1706836121]
+
+[node name="FluidVorticityVisualizer2D" type="FluidVorticityVisualizer2D" parent="." unique_id=1692132070 node_paths=PackedStringArray("sim_target")]
+sim_target = NodePath("../GPUStableFluids2D")
+display_mode = 3
+
+[node name="FluidMouseInteractor2D" type="FluidMouseInteractor2D" parent="." unique_id=146403781 node_paths=PackedStringArray("sim_target")]
+sim_target = NodePath("../GPUStableFluids2D")
+velocity_scale = 0.2

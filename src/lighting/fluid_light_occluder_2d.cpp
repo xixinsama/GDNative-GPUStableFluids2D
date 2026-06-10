@@ -18,7 +18,7 @@ FluidLightOccluder2D::FluidLightOccluder2D() = default;
 FluidLightOccluder2D::~FluidLightOccluder2D() { _clear_occluders(); }
 
 void FluidLightOccluder2D::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_sim_target", "path"), &FluidLightOccluder2D::set_sim_target);
+	ClassDB::bind_method(D_METHOD("set_sim_target", "target"), &FluidLightOccluder2D::set_sim_target);
 	ClassDB::bind_method(D_METHOD("get_sim_target"), &FluidLightOccluder2D::get_sim_target);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sim_target", PROPERTY_HINT_NODE_TYPE, "GPUStableFluids2D"), "set_sim_target", "get_sim_target");
 
@@ -49,8 +49,22 @@ void FluidLightOccluder2D::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("contours_updated", PropertyInfo(Variant::INT, "count")));
 }
 
-void FluidLightOccluder2D::set_sim_target(const NodePath &v) { _sim_target = v; }
-NodePath FluidLightOccluder2D::get_sim_target() const { return _sim_target; }
+void FluidLightOccluder2D::set_sim_target(Object *p_obj) {
+	if (p_obj) {
+		Node *node = Object::cast_to<Node>(p_obj);
+		if (node) {
+			_sim_target = get_path_to(node);
+		} else {
+			_sim_target = NodePath();
+		}
+	} else {
+		_sim_target = NodePath();
+	}
+}
+Object *FluidLightOccluder2D::get_sim_target() const {
+	if (_sim_target.is_empty()) return nullptr;
+	return get_node_or_null(_sim_target);
+}
 void FluidLightOccluder2D::set_density_threshold(float v) { _density_threshold = v; }
 float FluidLightOccluder2D::get_density_threshold() const { return _density_threshold; }
 void FluidLightOccluder2D::set_max_contours(int v) { _max_contours = v; }

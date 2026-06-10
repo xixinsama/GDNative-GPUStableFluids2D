@@ -44,7 +44,7 @@ private:
 	int _jacobi_velocity_iterations = 10;
 	bool _vorticity_enabled = true;
 	float _vorticity_scale = 0.4f;
-	float _color_decay = 0.0005f;
+	float _color_decay = 0.0f;
 	float _velocity_decay = -1.0f;
 	Color _clear_color = Color(0, 0, 0, 0);
 };

@@ -52,7 +52,7 @@ void FluidForceEmitter2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_auto_destroy"), &FluidForceEmitter2D::is_auto_destroy);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_destroy"), "set_auto_destroy", "is_auto_destroy");
 
-	ClassDB::bind_method(D_METHOD("set_sim_target", "path"), &FluidForceEmitter2D::set_sim_target);
+	ClassDB::bind_method(D_METHOD("set_sim_target", "target"), &FluidForceEmitter2D::set_sim_target);
 	ClassDB::bind_method(D_METHOD("get_sim_target"), &FluidForceEmitter2D::get_sim_target);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sim_target", PROPERTY_HINT_NODE_TYPE, "GPUStableFluids2D"), "set_sim_target", "get_sim_target");
 }
@@ -79,8 +79,22 @@ void FluidForceEmitter2D::set_lifetime(float v) { _lifetime = v; }
 float FluidForceEmitter2D::get_lifetime() const { return _lifetime; }
 void FluidForceEmitter2D::set_auto_destroy(bool v) { _auto_destroy = v; }
 bool FluidForceEmitter2D::is_auto_destroy() const { return _auto_destroy; }
-void FluidForceEmitter2D::set_sim_target(const NodePath &v) { _sim_target = v; }
-NodePath FluidForceEmitter2D::get_sim_target() const { return _sim_target; }
+void FluidForceEmitter2D::set_sim_target(Object *p_obj) {
+	if (p_obj) {
+		Node *node = Object::cast_to<Node>(p_obj);
+		if (node) {
+			_sim_target = get_path_to(node);
+		} else {
+			_sim_target = NodePath();
+		}
+	} else {
+		_sim_target = NodePath();
+	}
+}
+Object *FluidForceEmitter2D::get_sim_target() const {
+	if (_sim_target.is_empty()) return nullptr;
+	return get_node_or_null(_sim_target);
+}
 
 GPUStableFluids2D *FluidForceEmitter2D::_find_sim() const {
 	if (!_sim_target.is_empty()) {

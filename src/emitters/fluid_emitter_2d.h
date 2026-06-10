@@ -2,6 +2,7 @@
 
 #include "godot_cpp/classes/node2d.hpp"
 #include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/variant/color.hpp"
 #include "godot_cpp/variant/vector2.hpp"
 
@@ -32,7 +33,7 @@ public:
 	void set_swirl_strength(float v);  float get_swirl_strength() const;
 	void set_lifetime(float v);        float get_lifetime() const;
 	void set_auto_destroy(bool v);     bool is_auto_destroy() const;
-	void set_sim_target(const NodePath &v); NodePath get_sim_target() const;
+	void set_sim_target(Object *p_obj); Object *get_sim_target() const;
 
 	void _ready() override;
 	void _process(double p_delta) override;

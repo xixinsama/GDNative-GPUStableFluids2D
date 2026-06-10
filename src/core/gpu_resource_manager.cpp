@@ -92,6 +92,10 @@ void GPUResourceManager::initialize(RenderingDevice *p_device, int p_width, int 
 	FLUID_PRINT("[GPUResourceManager] obstacle_force: valid=", obstacle_force_pipeline.is_valid());
 	copy_texture_pipeline   = create_compute_pipeline("res://shaders/copy_texture.glsl");
 	FLUID_PRINT("[GPUResourceManager] copy_texture: valid=", copy_texture_pipeline.is_valid());
+	color_decay_pipeline    = create_compute_pipeline("res://shaders/color_decay.glsl");
+	FLUID_PRINT("[GPUResourceManager] color_decay: valid=", color_decay_pipeline.is_valid());
+	apply_force_emitter_pipeline = create_compute_pipeline("res://shaders/apply_force_emitter.glsl");
+	FLUID_PRINT("[GPUResourceManager] apply_force_emitter: valid=", apply_force_emitter_pipeline.is_valid());
 
 	// --- Storage buffers ---
 	{
@@ -133,6 +137,8 @@ void GPUResourceManager::terminate() {
 	free_pipeline(splat_batch_pipeline);
 	free_pipeline(obstacle_force_pipeline);
 	free_pipeline(copy_texture_pipeline);
+	free_pipeline(color_decay_pipeline);
+	free_pipeline(apply_force_emitter_pipeline);
 
 	device = nullptr;
 }

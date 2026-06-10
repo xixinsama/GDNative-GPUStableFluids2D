@@ -151,17 +151,21 @@ SIM 纹理: `STORAGE | SAMPLING | CAN_COPY_TO | CAN_COPY_FROM | CAN_UPDATE`
 
 #### FluidDisplay2D (Sprite2D)
 
-将流体密度/内部场纹理渲染到屏幕。作为 GPUStableFluids2D 的必要子节点。
+将流体密度/内部场纹理渲染到屏幕。必须作为 GPUStableFluids2D 的子节点——自动检测父节点并绑定其输出纹理，自动根据 `fluid_world_size / resolution` 计算缩放。
 
-**属性**: `sim_target`, `display_mode` (Density/Velocity/Pressure/Divergence/Vorticity), `auto_size`
+**属性**: `display_mode` (Density/Velocity/Pressure/Divergence/Vorticity), `show_debug_bounds`
 
-**运行时**: `_process()` 根据 `display_mode` 从 GPUStableFluids2D 获取对应纹理并更新 Sprite2D 的 Texture2DRD。
+**运行时**: `_ready()` 调用 `_bind_to_sim()` 向上遍历父节点链查找 GPUStableFluids2D，缓存指针。`_process()` 根据 `display_mode` 从 GPUStableFluids2D 获取对应内部场纹理（通过 `tex_display_*` 系列纹理），更新 Sprite2D 的 Texture2DRD。
+
+**设计原则**: 类似 CollisionShape2D 之于 PhysicsBody2D——FluidDisplay2D 是 GPUStableFluids2D 的"显示形状"，不需要独立的 sim_target 配置。
 
 #### FluidMouseInteractor2D (Node2D)
 
-将鼠标/触控输入转换为流体绘制请求。
+将鼠标/触控输入转换为流体绘制请求。必须作为 GPUStableFluids2D 的子节点——自动检测父节点。
 
-**属性**: `sim_target`, `mouse_button`, `draw_color`, `brush_size`, `velocity_scale`, `continuous_draw`, `interaction_mode` (Draw/Push/Pull/Swirl)
+**坐标系统**: 使用 `CanvasItem::get_global_mouse_position()` 获取世界空间鼠标位置，自动处理 Camera2D 变换。世界坐标直接传给 `GPUStableFluids2D::queue_draw_request()`，由其内部转换为流体 UV 坐标。
+
+**属性**: `mouse_button`, `draw_color`, `brush_size`, `velocity_scale`, `interaction_mode` (Draw/Push/Pull/Swirl)
 
 #### FluidVorticityVisualizer2D (Sprite2D)
 

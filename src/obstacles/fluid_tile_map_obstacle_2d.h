@@ -2,19 +2,23 @@
 
 #include "godot_cpp/classes/node2d.hpp"
 #include "godot_cpp/variant/node_path.hpp"
+#include "godot_cpp/classes/object.hpp"
 
 #include "core/fluid_types.h"
 
 namespace godot {
 
+class TileMapLayer;
+
 // Converts a TileMapLayer into fluid obstacle data.
-// Place in scene, point at a TileMapLayer, and it auto-generates obstacle boundaries.
+// Place in scene as child of GPUStableFluids2D, point at a TileMapLayer,
+// and it auto-generates FluidObstacle2D children for active tile cells.
 class FluidTileMapObstacle2D : public Node2D {
 	GDCLASS(FluidTileMapObstacle2D, Node2D)
 
 public:
 	FluidTileMapObstacle2D() = default;
-	~FluidTileMapObstacle2D() override = default;
+	~FluidTileMapObstacle2D() override;
 
 	void set_tile_map_path(const NodePath &p_path);
 	NodePath get_tile_map_path() const;
@@ -31,10 +35,11 @@ public:
 	void set_terrain_set(int p_set);
 	int get_terrain_set() const;
 
-	void set_sim_target(const NodePath &p_path);
-	NodePath get_sim_target() const;
+	void set_sim_target(Object *p_obj);
+	Object *get_sim_target() const;
 
 	void _ready() override;
+	void _process(double p_delta) override;
 
 protected:
 	static void _bind_methods();
@@ -46,8 +51,10 @@ private:
 	int _physics_layer_index = 0;
 	int _terrain_set = -1;
 	NodePath _sim_target;
+	bool _rasterized = false;
 
 	void _rasterize_tile_map();
+	void _clear_children();
 };
 
 } // namespace godot

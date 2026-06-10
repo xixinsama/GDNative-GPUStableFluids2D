@@ -18,7 +18,7 @@ func _ready():
 	for i in range(7):
 		var e := FluidEmitter2D.new()
 		e.set_emission_preset(i + 1) # skip Custom
-		e.set_sim_target(NodePath("../GPUStableFluids2D"))
+		e.sim_target = $"../GPUStableFluids2D"
 		e.set_active(true)
 		var x = -300.0 + i * 100.0
 		e.position = Vector2(x, -200)

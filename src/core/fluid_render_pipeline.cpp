@@ -86,31 +86,35 @@ void FluidRenderPipeline::execute(float dt, GPUStableFluids2D *sim) {
 	// Correct Stam Stable Fluids order:
 	// Splat input → obstacle forces → advect velocity → diffuse → vorticity →
 	// divergence → pressure → subtract gradient → boundary → advect color
-	FLUID_PRINT("[FluidPipeline] step 1/11: splat_batch count=", sim->get_draw_request_count());
+	FLUID_PRINT("[FluidPipeline] step 1/13: splat_batch count=", sim->get_draw_request_count());
 	_step_splat_batch(sim->get_draw_request_count(), dt);
-	FLUID_PRINT("[FluidPipeline] step 2/11: obstacle_force strength=", sim->get_obstacle_force_strength());
+	FLUID_PRINT("[FluidPipeline] step 2/13: apply_force_emitters");
+	_step_apply_force_emitters(dt);
+	FLUID_PRINT("[FluidPipeline] step 3/13: obstacle_force strength=", sim->get_obstacle_force_strength());
 	_step_obstacle_force(dt, sim->get_obstacle_force_strength());
-	FLUID_PRINT("[FluidPipeline] step 3/11: advect_velocity");
+	FLUID_PRINT("[FluidPipeline] step 4/13: advect_velocity");
 	_step_advect_velocity(dt, rdx);
 	if (sim->get_viscosity() > 0.000001f) {
-		FLUID_PRINT("[FluidPipeline] step 4/11: diffuse_velocity visc=", sim->get_viscosity());
+		FLUID_PRINT("[FluidPipeline] step 5/13: diffuse_velocity visc=", sim->get_viscosity());
 		_step_diffuse_velocity(dt, sim->get_viscosity(), 10);
-	} else { FLUID_PRINT("[FluidPipeline] step 4/11: diffuse_velocity SKIP visc=0"); }
+	} else { FLUID_PRINT("[FluidPipeline] step 5/13: diffuse_velocity SKIP visc=0"); }
 	if (sim->is_vorticity_enabled()) {
-		FLUID_PRINT("[FluidPipeline] step 5/11: vorticity scale=", sim->get_vorticity_scale());
+		FLUID_PRINT("[FluidPipeline] step 6/13: vorticity scale=", sim->get_vorticity_scale());
 		_step_vorticity(dt, sim->get_vorticity_scale());
-	} else { FLUID_PRINT("[FluidPipeline] step 5/11: vorticity SKIP"); }
-	FLUID_PRINT("[FluidPipeline] step 6/11: divergence");
+	} else { FLUID_PRINT("[FluidPipeline] step 6/13: vorticity SKIP"); }
+	FLUID_PRINT("[FluidPipeline] step 7/13: divergence");
 	_step_divergence(rdx * 0.5f);
-	FLUID_PRINT("[FluidPipeline] step 7/11: solve_pressure iter=", sim->get_poisson_iterations());
+	FLUID_PRINT("[FluidPipeline] step 8/13: solve_pressure iter=", sim->get_poisson_iterations());
 	_step_solve_pressure(sim->get_poisson_iterations());
-	FLUID_PRINT("[FluidPipeline] step 8/11: subtract_gradient");
+	FLUID_PRINT("[FluidPipeline] step 9/13: subtract_gradient");
 	_step_subtract_gradient(rdx * 0.5f);
-	FLUID_PRINT("[FluidPipeline] step 9/11: boundary");
+	FLUID_PRINT("[FluidPipeline] step 10/13: boundary");
 	_step_boundary();
-	FLUID_PRINT("[FluidPipeline] step 10/11: advect_color");
+	FLUID_PRINT("[FluidPipeline] step 11/13: advect_color");
 	_step_advect_color(dt, rdx);
-	FLUID_PRINT("[FluidPipeline] step 11/11: copy_obstacle");
+	FLUID_PRINT("[FluidPipeline] step 12/13: color_decay longevity=", sim->get_ink_longevity());
+	_step_color_decay(sim->get_ink_longevity(), sim->get_color_decay());
+	FLUID_PRINT("[FluidPipeline] step 13/13: copy_obstacle");
 	_step_copy_obstacle();
 
 	FLUID_PRINT("[FluidPipeline] execute() DONE");
@@ -277,6 +281,54 @@ void FluidRenderPipeline::_step_boundary() {
 	  _swap_pressure(); }
 }
 
+void FluidRenderPipeline::_step_apply_force_emitters(float dt) {
+	// GPU-side force emitters — the force_emitter_buffer is populated by
+	// FluidForceEmitter2D nodes. This step applies their forces to velocity.
+	// The buffer is pre-allocated; this dispatch is a no-op when no emitters active.
+	if (!_gpu->apply_force_emitter_pipeline.is_valid()) return;
+
+	struct {
+		float resolution[2];
+		int emitter_count;
+		float dt;
+	} pc_data;
+	pc_data.resolution[0] = (float)_gpu->width;
+	pc_data.resolution[1] = (float)_gpu->height;
+	pc_data.emitter_count = 0; // TODO: collect active count from FluidForceEmitter2D nodes
+	pc_data.dt = dt;
+
+	PackedByteArray pc; pc.resize(16);
+	std::memcpy(pc.ptrw(), &pc_data, 16);
+
+	// Only dispatch if there are active emitters
+	if (pc_data.emitter_count <= 0) return;
+
+	int64_t cl = _gpu->device->compute_list_begin();
+	_gpu->device->compute_list_bind_compute_pipeline(cl, _gpu->apply_force_emitter_pipeline.pipeline_id);
+
+	RID us0 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->apply_force_emitter_pipeline.shader_id,
+		_gpu->force_emitter_buffer, 0,
+		RenderingDevice::UNIFORM_TYPE_STORAGE_BUFFER);
+	_gpu->device->compute_list_bind_uniform_set(cl, us0, 0);
+
+	RID us1 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->apply_force_emitter_pipeline.shader_id,
+		_gpu->tex_velocity, 1,
+		RenderingDevice::UNIFORM_TYPE_IMAGE);
+	_gpu->device->compute_list_bind_uniform_set(cl, us1, 1);
+
+	RID us2 = _gpu->get_or_create_cached_uniform_set(
+		_gpu->apply_force_emitter_pipeline.shader_id,
+		_gpu->tex_color, 2,
+		RenderingDevice::UNIFORM_TYPE_IMAGE);
+	_gpu->device->compute_list_bind_uniform_set(cl, us2, 2);
+
+	_gpu->device->compute_list_set_push_constant(cl, pc, pc.size());
+	_gpu->device->compute_list_dispatch(cl, _x_groups, _y_groups, 1);
+	_gpu->device->compute_list_end();
+}
+
 void FluidRenderPipeline::_step_obstacle_force(float dt, float strength) {
 	float d[4] = {(float)_gpu->width, (float)_gpu->height, dt, strength};
 	PackedByteArray pc; pc.resize(16); _fill_pc(pc, d, 16);
@@ -284,6 +336,17 @@ void FluidRenderPipeline::_step_obstacle_force(float dt, float strength) {
 		_gpu->tex_velocity, IMG, _gpu->tex_temp, IMG,
 		_gpu->tex_obstacle, SMP, _gpu->tex_obstacle_pre, SMP);
 	_swap_velocity();
+}
+
+void FluidRenderPipeline::_step_color_decay(float longevity, float decay) {
+	// Applies multiplicative longevity (fade) and subtractive decay to the color field.
+	// longevity = 0.995 → color fades to 50% in ~138 frames (~2.3s @ 60fps)
+	// decay = 0.0005 → subtracts 0.0005 per frame from RGB channels
+	float d[4] = {(float)_gpu->width, (float)_gpu->height, longevity, decay};
+	PackedByteArray pc; pc.resize(16); _fill_pc(pc, d, 16);
+	_dispatch(_gpu->color_decay_pipeline, pc,
+		_gpu->tex_color, IMG, _gpu->tex_temp, IMG);
+	_swap_color();
 }
 
 void FluidRenderPipeline::_step_copy_obstacle() {

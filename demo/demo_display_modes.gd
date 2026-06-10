@@ -31,7 +31,7 @@ func _input(ev):
 	match ev.keycode:
 		KEY_1: mode_a = (mode_a + 1) % 5; display_a.set_display_mode(mode_a)
 		KEY_2: mode_b = (mode_b + 1) % 5; display_b.set_display_mode(mode_b)
-		KEY_3: display_a.set_auto_size(!display_a.is_auto_size())
+		KEY_3: display_a.set_show_debug_bounds(!display_a.is_showing_debug_bounds())
 		KEY_R: sim.reset()
 	_update_info()
 
@@ -40,12 +40,12 @@ func _update_info():
 将模拟纹理渲染到屏幕。可并排多个显示不同内部场。
 
 左: [color=#ffaa00]%s[/color] | 右: [color=#ffaa00]%s[/color]
-auto_size: %s
+show_debug_bounds: %s
 
 按键:
   1 — 切换左显示模式
   2 — 切换右显示模式
-  3 — 切换 auto_size
+  3 — 切换 show_debug_bounds
   R — 重置
 
-鼠标左键 — 在模拟域中央绘制流体""" % [MODE_NAMES[mode_a], MODE_NAMES[mode_b], "ON" if display_a.is_auto_size() else "OFF"]
+鼠标左键 — 在模拟域中央绘制流体""" % [MODE_NAMES[mode_a], MODE_NAMES[mode_b], "ON" if display_a.is_showing_debug_bounds() else "OFF"]

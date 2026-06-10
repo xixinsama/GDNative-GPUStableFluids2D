@@ -116,6 +116,8 @@ public:
 	ComputePipeline splat_batch_pipeline;
 	ComputePipeline obstacle_force_pipeline;
 	ComputePipeline copy_texture_pipeline;
+	ComputePipeline color_decay_pipeline;
+	ComputePipeline apply_force_emitter_pipeline;
 
 	// Metadata
 	int width  = 512;
